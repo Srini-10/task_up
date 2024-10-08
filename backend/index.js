@@ -6,6 +6,7 @@ const cors = require("cors");
 const TestSubmission = require("./Module/TestSubmission.js");
 const CreateCandidate = require("./Module/CreateCandidate.js");
 const app = express();
+require("dotenv").config();
 const allowedOrigins = [
   "https://taskup-brix.vercel.app", // Deployed frontend
   "http://localhost:3000", // Local development
