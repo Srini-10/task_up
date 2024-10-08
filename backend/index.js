@@ -6,14 +6,36 @@ const cors = require("cors");
 const TestSubmission = require("./Module/TestSubmission.js");
 const CreateCandidate = require("./Module/CreateCandidate.js");
 const app = express();
-app.use(cors());
+const allowedOrigins = [
+  "https://taskup-brix.vercel.app", // Deployed frontend
+  "http://localhost:3000", // Local development
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or Postman)
+      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, origin);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
-mongoose.connect("mongodb://localhost:27017/sassDB", {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+mongoose
+  .connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("Connected to MongoDB"))
+  .catch((err) => console.error("MongoDB connection error:", err));
 
 // Set up multer for file uploads
 const storage = multer.diskStorage({
