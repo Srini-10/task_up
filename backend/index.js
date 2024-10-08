@@ -1,0 +1,773 @@
+const express = require("express");
+const mongoose = require("mongoose");
+const multer = require("multer");
+const path = require("path");
+const cors = require("cors");
+const TestSubmission = require("./Module/TestSubmission.js");
+const CreateCandidate = require("./Module/CreateCandidate.js");
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.use("/uploads", express.static("uploads"));
+
+mongoose.connect("mongodb://localhost:27017/sassDB", {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
+
+// Set up multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/"); // Set the upload destination folder
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname)); // Set a unique filename with timestamp
+  },
+});
+const upload = multer({ storage: storage });
+
+const QuestionSchema = new mongoose.Schema({
+  questionText: { type: String, required: true },
+  inputType: { type: String, required: true }, // e.g., "text", "radio", etc.
+  options: { type: [String], default: [] },
+  correctAnswerIndices: { type: [String], required: true }, // Array for multiple correct answers
+});
+
+// Define the schema for tests
+const TestSchema = new mongoose.Schema({
+  testName: String,
+  startDate: Date,
+  endDate: Date,
+  authOption: String,
+  password: String,
+  questions: [QuestionSchema],
+  candidates: [
+    {
+      email: { type: String, required: true },
+      phone: { type: String, required: true },
+      registerNumber: { type: String, required: true },
+      dob: { type: String, required: true },
+    },
+  ],
+  submissions: [
+    {
+      registerNumber: String,
+      marks: Number,
+      submissionTime: { type: Date, default: Date.now },
+      malpractice: { type: String, default: "false" },
+    },
+  ],
+});
+
+const Test = mongoose.model("Test", TestSchema);
+
+// POST route to register a new candidate
+app.post(
+  "/api/testCandidates",
+  upload.single("profilePicture"),
+  async (req, res) => {
+    try {
+      const { registerNumber, dob, email, phone } = req.body;
+      const profilePicture = req.file ? req.file.filename : null;
+
+      // Check if register number exists
+      const existingCandidate = await CreateCandidate.findOne({
+        registerNumber,
+      });
+
+      if (existingCandidate) {
+        return res
+          .status(400)
+          .json({ message: "Register number already exists" });
+      }
+
+      // Save the candidate data to MongoDB
+      const newCandidate = new CreateCandidate({
+        registerNumber,
+        dob,
+        email,
+        phone,
+        profilePicture, // Save the file name in the database
+      });
+
+      await newCandidate.save();
+      res.status(201).json({ message: "candidate registered successfully!" });
+    } catch (error) {
+      console.error("Error registering candidate:", error);
+      res.status(500).json({ message: "Error registering candidate." });
+    }
+  }
+);
+
+// PUT: Update existing candidate details
+app.put(
+  "/api/testCandidates/:id",
+  upload.single("profilePicture"),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { registerNumber, dob, email, phone } = req.body;
+
+      const updatedFields = {
+        registerNumber,
+        dob,
+        email,
+        phone,
+      };
+
+      // Update profile picture only if a new one is uploaded
+      if (req.file) {
+        updatedFields.profilePicture = req.file.filename;
+      }
+
+      // Update the candidate record in the database
+      const updatedcandidate = await CreateCandidate.findByIdAndUpdate(
+        id,
+        updatedFields,
+        { new: true }
+      );
+
+      if (!updatedcandidate) {
+        return res.status(404).send("candidate not found");
+      }
+
+      res.send("candidate updated successfully");
+    } catch (error) {
+      console.error("Error updating candidate: ", error);
+      res.status(500).send("Error updating candidate");
+    }
+  }
+);
+
+// Get all candidates
+app.get("/api/testCandidates", async (req, res) => {
+  try {
+    const candidates = await CreateCandidate.find();
+    res.json(candidates);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching candidates." });
+  }
+});
+
+// DELETE: Delete a candidate
+app.delete("/api/testCandidates/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deletedcandidate = await CreateCandidate.findByIdAndDelete(id);
+
+    if (!deletedcandidate) {
+      return res.status(404).send("candidate not found");
+    }
+
+    res.send("candidate deleted successfully");
+  } catch (error) {
+    res.status(500).send("Error deleting candidate");
+  }
+});
+
+// POST route to create a new test
+app.post("/api/tests", async (req, res) => {
+  try {
+    const {
+      testName,
+      startDate,
+      endDate,
+      authOption,
+      questions = [],
+      candidates = [],
+    } = req.body;
+
+    // Log the received body to verify if the candidates and questions exist
+    console.log("Received candidates:", candidates);
+    console.log("Received questions:", questions);
+
+    // Validate and format candidate data if it exists
+    const formattedCandidates = candidates.map((candidate) => ({
+      registerNumber: candidate.registerNumber,
+      dob: candidate.dob,
+      email: candidate.email,
+      phone: candidate.phone,
+    }));
+
+    // Validate that each question has correctAnswerIndices, or set default to an empty array
+    const validatedQuestions = questions.map((q) => ({
+      questionText: q.questionText,
+      inputType: q.inputType,
+      options: q.options,
+      correctAnswerIndices: q.correctAnswerIndices || [],
+    }));
+
+    // Create a new test instance
+    const newTest = new Test({
+      testName,
+      startDate,
+      endDate,
+      authOption,
+      questions: validatedQuestions,
+      candidates: formattedCandidates,
+    });
+
+    // Save the test to MongoDB
+    await newTest.save();
+
+    res.status(201).json({ message: "Test created successfully!" });
+  } catch (error) {
+    console.error("Error creating test:", error);
+    res.status(500).json({
+      message: error.message || "Server error. Unable to create test.",
+    });
+  }
+});
+
+app.post("/api/submit-test", async (req, res) => {
+  const { answers } = req.body;
+  let score = 0;
+
+  const questions = await QuestionModel.find();
+
+  questions.forEach((question) => {
+    const correctAnswerIndex = question.correctAnswerIndex;
+    const userAnswerIndex = answers[question._id];
+
+    if (userAnswerIndex === correctAnswerIndex) {
+      score += 1; // Add to score if correct
+    }
+  });
+
+  res.json({ score });
+});
+
+// Get all tests
+app.get("/api/tests", async (req, res) => {
+  try {
+    // Fetch all tests from the database
+    const tests = await Test.find().populate("questions");
+
+    // Map through the tests and structure the response
+    const testsWithDetails = tests.map((test) => ({
+      _id: test._id,
+      testName: test.testName,
+      startDate: test.startDate,
+      endDate: test.endDate,
+      authOption: test.authOption,
+      questions: test.questions.map((q) => ({
+        questionText: q.questionText,
+        inputType: q.inputType,
+        options: q.options,
+        correctAnswerIndices: q.correctAnswerIndices || [],
+      })),
+      candidates: test.candidates,
+      malpractice: test.malpractice,
+      submissionsCount: test.submissions ? test.submissions.length : 0,
+    }));
+
+    // Send the structured tests data as a response
+    res.json(testsWithDetails);
+  } catch (error) {
+    console.error("Error fetching tests:", error);
+    res.status(500).json({ error: "Error fetching tests" });
+  }
+});
+
+// Fetch Input Types
+app.get("/api/inputTypes", (req, res) => {
+  const inputTypes = ["text", "radio", "checkbox", "select"];
+  res.json(inputTypes);
+});
+
+app.get("/api/tests/:testId/submissions-count", async (req, res) => {
+  const { testId } = req.params;
+
+  try {
+    // Count the number of submissions for this test
+    const submissionsCount = await TestSubmission.countDocuments({ testId });
+
+    res.status(200).json({ testId, submissionsCount });
+  } catch (error) {
+    console.error("Error fetching submissions count:", error);
+    res
+      .status(500)
+      .json({ message: "Server error while fetching submissions count." });
+  }
+});
+
+// Get total submitted users' register numbers and total scores for a specific test
+app.get("/api/tests/:testId/ranking", async (req, res) => {
+  const { testId } = req.params;
+
+  try {
+    // Find all submissions related to the specific testId
+    const submissions = await TestSubmission.find({ testId });
+
+    if (!submissions || submissions.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No submissions found for this test." });
+    }
+
+    // Map over all submissions and include all details for the rankings
+    const rankings = submissions.map((submission) => ({
+      registerNumber: submission.registerNumber,
+      marks: submission.score,
+      submissionTime: submission.submittedAt,
+      answers: submission.answers.map((answer) => ({
+        questionId: answer.questionId,
+        questionText: answer.questionText,
+        selectedAnswer: answer.selectedAnswer,
+      })),
+      questions: submission.questions.map((question) => ({
+        _id: question._id,
+        questionText: question.questionText,
+        options: question.options,
+        answers: question.answers,
+      })),
+      malpractice:
+        submission.malpractice === "true" || submission.malpractice === true
+          ? "true"
+          : "false",
+      score: submission.score,
+    }));
+
+    // Sort rankings by marks in descending order
+    const sortedRankings = rankings.sort((a, b) => b.marks - a.marks);
+
+    // Log expanded objects for better visibility
+    console.log(JSON.stringify(sortedRankings, null, 2));
+
+    res.json(sortedRankings);
+  } catch (error) {
+    console.error("Error fetching rankings:", error);
+    res.status(500).json({ message: "Server error while fetching rankings." });
+  }
+});
+
+app.get("/api/questions", async (req, res) => {
+  const questions = await QuestionModel.find(); // Fetch from MongoDB
+  res.json(questions);
+});
+
+// GET route to fetch questions for a specific test
+app.get("/api/tests/:testId/questions", async (req, res) => {
+  const { testId } = req.params;
+
+  try {
+    // Find the test by ID and return the questions
+    const test = await Test.findById(testId);
+    if (!test) {
+      return res.status(404).json({ message: "Test not found" });
+    }
+
+    res.json(test.questions); // Send the questions array to the client
+  } catch (error) {
+    console.error("Error fetching questions:", error);
+    res.status(500).json({ message: "Server error while fetching questions" });
+  }
+});
+
+// DELETE route to delete a test by its ID
+app.delete("/api/tests/:testId", async (req, res) => {
+  const { testId } = req.params; // Get the testId from the URL
+
+  try {
+    // Find and delete the test from the database
+    const deletedTest = await Test.findByIdAndDelete(testId);
+
+    // If the test does not exist, return a 404 error
+    if (!deletedTest) {
+      return res.status(404).json({ message: "Test not found" });
+    }
+
+    // If deletion is successful, return a success message
+    res.json({ message: "Test deleted successfully!" });
+  } catch (error) {
+    // Handle any errors that occur during the deletion process
+    console.error("Error deleting test:", error);
+    res.status(500).json({ message: "Server error while deleting the test." });
+  }
+});
+
+// Assuming you already have the necessary imports and initial setup
+
+// PUT route to update a specific question
+app.put("/api/tests/:testId/questions/:questionId", async (req, res) => {
+  try {
+    const { testId, questionId } = req.params;
+    const { questionText, options, correctAnswerIndices, inputType } = req.body;
+
+    // Log the received request body to ensure correctAnswerIndices is populated
+    console.log("Received request data:", req.body);
+
+    // Update the specific question in the test
+    const updatedTest = await Test.findOneAndUpdate(
+      { _id: testId, "questions._id": questionId },
+      {
+        $set: {
+          "questions.$.questionText": questionText,
+          "questions.$.options": options,
+          "questions.$.correctAnswerIndices": correctAnswerIndices, // Ensure this is properly updated
+          "questions.$.inputType": inputType,
+        },
+      },
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedTest) {
+      return res.status(404).json({ message: "Test or Question not found." });
+    }
+
+    res.status(200).json({
+      message: "Question updated successfully!",
+      updatedTest,
+    });
+  } catch (error) {
+    console.error("Error updating question:", error);
+    res.status(500).json({
+      message: "Server error. Unable to update question.",
+    });
+  }
+});
+
+// DELETE route to delete a specific question
+app.delete("/api/questions/:questionId", async (req, res) => {
+  const { questionId } = req.params;
+
+  try {
+    const test = await Test.findOne({ "questions._id": questionId });
+    if (!test) {
+      return res.status(404).json({ message: "Question not found" });
+    }
+
+    // Remove the question from the questions array
+    test.questions.id(questionId).remove();
+    await test.save(); // Save the updated test
+
+    res.status(200).json({ message: "Question deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting question:", error);
+    res.status(500).json({ message: "Server error while deleting question" });
+  }
+});
+
+app.post("/api/tests/:testId/authenticate-password", async (req, res) => {
+  const { testName, password } = req.body;
+
+  console.log("Received testName:", testName);
+  console.log("Received password:", password);
+
+  try {
+    // Find the test by testName
+    const test = await Test.findOne({ testName });
+    console.log("Test found:", test);
+
+    // Check if the test exists
+    if (!test) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Test not found" });
+    }
+
+    // Directly compare the incoming password with the stored password
+    const isMatch = password === test.password; // Change this line to compare plain text passwords
+    console.log("Password match:", isMatch);
+
+    // Check if the passwords match
+    if (!isMatch) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Incorrect password" });
+    }
+
+    // Authentication successful
+    res
+      .status(200)
+      .json({ success: true, message: "Authenticated successfully" });
+  } catch (error) {
+    console.error("Authentication error:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Server error during authentication" });
+  }
+});
+
+app.post("/api/tests/:testId/authenticate", async (req, res) => {
+  const { registerNumber, dob, email, phone } = req.body;
+  const { testId } = req.params;
+
+  try {
+    const test = await Test.findById(testId);
+
+    if (!test) {
+      return res.status(404).json({ message: "Test not found" });
+    }
+
+    console.log("Received registerNumber:", registerNumber);
+    console.log("Received dob:", dob);
+    console.log("Received email:", email);
+    console.log("Received phone:", phone);
+
+    // Check if the candidate is in the test's candidate list
+    const candidate = test.candidates.find(
+      (candidate) =>
+        (candidate.registerNumber === registerNumber &&
+          candidate.dob === dob) ||
+        (candidate.email &&
+          candidate.email.toLowerCase() === email.toLowerCase() &&
+          candidate.phone === phone)
+    );
+
+    if (!candidate) {
+      return res.status(403).json({ message: "Authentication failed" });
+    }
+
+    // Authentication successful, return the test questions and candidate details
+    res.status(200).json({
+      questions: test.questions,
+      registerNumber: candidate.registerNumber,
+      email: candidate.email,
+    });
+  } catch (error) {
+    console.error("Error authenticating candidate:", error);
+    res.status(500).json({ message: "Server error during authentication" });
+  }
+});
+
+// POST route to submit the test and calculate the score
+app.post("/api/tests/:testId/submit", async (req, res) => {
+  const { testId } = req.params;
+  const { answers, registerNumber, email, questions, malpractice } = req.body;
+
+  console.log("Incoming data:", {
+    email,
+    registerNumber,
+    answers,
+    questions,
+    malpractice,
+  });
+
+  try {
+    const test = await Test.findById(testId);
+
+    if (!test) {
+      return res.status(404).json({ message: "Test not found" });
+    }
+
+    let score = 0;
+    const totalQuestions = test.questions.length;
+
+    // Calculate score based on selected answers
+    test.questions.forEach((question) => {
+      const submittedAnswer = answers.find(
+        (answer) => answer.questionId === question._id
+      )?.selectedAnswer; // Find the submitted answer based on question ID
+
+      // Check if the question has multiple correct answers
+      if (Array.isArray(question.correctAnswer)) {
+        if (
+          submittedAnswer &&
+          question.correctAnswer.includes(submittedAnswer)
+        ) {
+          score += 1;
+        }
+      } else if (submittedAnswer === question.correctAnswer) {
+        score += 1;
+      }
+    });
+
+    console.log("Score calculated:", { score, totalQuestions });
+
+    // You can save or use the `email` field as necessary here, e.g., store it in the database, send a confirmation email, etc.
+
+    res.json({ score, totalQuestions });
+  } catch (error) {
+    console.error("Error submitting test:", error);
+    res.status(500).json({ message: "Server error while submitting test." });
+  }
+});
+
+app.post("/api/tests/:testId/save-submission", async (req, res) => {
+  const { email, registerNumber, answers, score, questions, malpractice } =
+    req.body; // Extract malpractice from the request body
+  const { testId } = req.params;
+
+  try {
+    // Create a new TestSubmission document
+    const submission = new TestSubmission({
+      testId,
+      email,
+      registerNumber,
+      answers,
+      score,
+      questions,
+      malpractice,
+      submissionTime: new Date(), // Add submissionTime to record the time of submission
+    });
+
+    await submission.save(); // Save the submission to the database
+
+    console.log("Saved data:", {
+      testId,
+      email,
+      registerNumber,
+      answers,
+      score,
+      questions,
+      malpractice,
+      submissionTime: new Date(),
+    });
+
+    // Update the Test document with the new submission details
+    await Test.findByIdAndUpdate(testId, {
+      $push: {
+        submissions: {
+          email,
+          registerNumber,
+          answers,
+          marks: score,
+          questions,
+          malpractice,
+          submissionTime: new Date(), // Add submission time to the Test document
+        },
+      },
+    });
+
+    // Send a success response
+    res
+      .status(201)
+      .json({ message: "Submission saved successfully", submission });
+  } catch (error) {
+    console.error("Error saving submission:", error);
+    res
+      .status(500)
+      .json({ message: "Error saving submission", error: error.message });
+  }
+});
+
+// Assuming you're using Express.js for the backend
+app.post("/api/tests/:testId/check-submission", async (req, res) => {
+  const { email, registerNumber } = req.body;
+  const { testId } = req.params;
+
+  try {
+    console.log("Received testId:", testId);
+    console.log("Received registerNumber:", registerNumber);
+    console.log("Received email:", email);
+
+    // Check if a submission exists for this test and registerNumber
+    const submission = await TestSubmission.findOne({
+      testId,
+      $or: [{ email }, { registerNumber }],
+    });
+
+    console.log("Submission found:", submission);
+
+    if (submission) {
+      // If submission exists, get total number of questions for the test
+      const test = await Test.findById(testId);
+      const totalQuestions = test.questions.length;
+
+      console.log("Total questions in test:", totalQuestions);
+
+      return res.json({
+        submitted: true,
+        score: submission.score,
+        totalQuestions,
+      });
+    } else {
+      // No submission exists for this registerNumber in this test
+      console.log("No submission found.");
+      return res.json({ submitted: false });
+    }
+  } catch (error) {
+    console.error("Error checking submission:", error);
+    res.status(500).json({ message: "Error checking submission" });
+  }
+});
+
+// PUT route to update an existing test
+app.put("/api/tests/:testId", async (req, res) => {
+  const { testId } = req.params;
+  const {
+    testName,
+    startDate,
+    endDate,
+    authOption,
+    password,
+    questions,
+    candidates,
+    malpractice,
+  } = req.body;
+
+  try {
+    // Log the received questions for debugging
+    console.log("Received questions data:", questions);
+
+    // Validate and process the questions
+    const validatedQuestions = questions.map((q, index) => {
+      return {
+        questionText: q.questionText,
+        inputType: q.inputType,
+        options: q.options,
+        correctAnswerIndices: q.correctAnswerIndices || [], // Ensure this is valid
+      };
+    });
+
+    // Construct the updated test data with validated questions
+    const updatedTestData = {
+      testName,
+      startDate,
+      endDate,
+      authOption,
+      password: authOption === "custom" ? password : null,
+      questions: validatedQuestions, // Use validated questions here
+      candidates,
+      malpractice, // Store as boolean
+    };
+
+    // Update the test in the database
+    const updatedTest = await Test.findByIdAndUpdate(testId, updatedTestData, {
+      new: true, // Return the updated document
+      runValidators: true, // Run validation before update
+    });
+
+    if (!updatedTest) {
+      return res.status(404).json({ message: "Test not found" });
+    }
+
+    res
+      .status(200)
+      .json({ message: "Test updated successfully!", updatedTest });
+  } catch (error) {
+    console.error("Error updating test:", error);
+    res.status(500).json({
+      message: error.message || "Server error. Unable to update test.",
+    });
+  }
+});
+
+// GET route to fetch all tests (recently added)
+app.get("/api/tests/recent", async (req, res) => {
+  try {
+    const tests = await Test.find(); // You can add filters or sorting if needed
+    res.json(tests);
+  } catch (error) {
+    console.error("Error fetching tests:", error);
+    res.status(500).json({ message: "Server error. Unable to fetch tests." });
+  }
+});
+
+app.get("/api/tests/:testId", async (req, res) => {
+  const { testId } = req.params;
+  try {
+    const test = await Test.findById(testId);
+    if (!test) {
+      return res.status(404).send({ message: "Test not found" });
+    }
+    res.status(200).send(test);
+  } catch (error) {
+    res.status(500).send({ message: "Server error" });
+  }
+});
+
+app.listen(20000, () => {
+  console.log("Server running on port 20000");
+});
