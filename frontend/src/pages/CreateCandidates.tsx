@@ -24,7 +24,6 @@ const CreateCandidates = () => {
   const [profilePreview, setProfilePreview] = useState(null); // For previewing image
   const [message, setMessage] = useState("");
   const [candidatesList, setCandidatesList] = useState([]);
-  const [isEditing, setIsEditing] = useState(false);
   const [editcandidateId, setEditcandidateId] = useState(null);
   const [openEditModal, setOpenEditModal] = useState(false);
 

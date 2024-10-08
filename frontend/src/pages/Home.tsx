@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import {
-  Container,
   TextField,
   Button,
   Typography,
@@ -14,10 +13,8 @@ import {
   InputLabel,
   Checkbox,
   Radio,
-  RadioGroup,
   FormControl,
   FormControlLabel,
-  FormLabel,
   Modal,
 } from "@mui/material";
 import AddQuestion from "../components/AddQuestion.tsx";
@@ -28,7 +25,6 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SearchIcon from "../assets/Search_Icon.svg";
 import DefaultProfile from "../assets/User_Profile.svg";
-import { Link } from "react-router-dom";
 
 const Home = () => {
   const [testName, setTestName] = useState(
@@ -152,6 +148,7 @@ const Home = () => {
         "http://localhost:20000/api/tests",
         testData
       );
+      console.log(response.data);
       alert("Test created successfully!");
       resetForm();
     } catch (error) {
