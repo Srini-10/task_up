@@ -76,7 +76,7 @@ const EditTest = () => {
     const fetchTestDetails = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:20000/api/tests/${testId}`
+          `https://taskup-backend.vercel.app/api/tests/${testId}`
         );
         const test = response.data;
 
@@ -171,7 +171,7 @@ const EditTest = () => {
 
     try {
       const response = await axios.put(
-        `http://localhost:20000/api/tests/${testId}`,
+        `https://taskup-backend.vercel.app/api/tests/${testId}`,
         updatedTestData
       );
       alert("Test updated successfully!");
@@ -239,7 +239,7 @@ const EditTest = () => {
 
     try {
       await axios.put(
-        `http://localhost:20000/api/tests/${testId}/questions/${questions[editQuestionIndex]._id}`,
+        `https://taskup-backend.vercel.app/api/tests/${testId}/questions/${questions[editQuestionIndex]._id}`,
         updatedQuestion
       );
 

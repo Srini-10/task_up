@@ -70,7 +70,7 @@ const Home = () => {
     const fetchInputTypes = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:20000/api/inputTypes"
+          "https://taskup-backend.vercel.app/api/inputTypes"
         );
         setInputTypes(response.data);
       } catch (error) {
@@ -84,7 +84,7 @@ const Home = () => {
   const fetchCandidates = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:20000/api/testCandidates"
+        "https://taskup-backend.vercel.app/api/testCandidates"
       );
       setCandidates(response.data);
       console.log(response.data);
@@ -145,7 +145,7 @@ const Home = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:20000/api/tests",
+        "https://taskup-backend.vercel.app/api/tests",
         testData
       );
       console.log(response.data);
