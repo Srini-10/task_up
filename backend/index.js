@@ -768,6 +768,7 @@ app.get("/api/tests/:testId", async (req, res) => {
   }
 });
 
-app.listen(20000, () => {
-  console.log("Server running on port 20000");
+const PORT = process.env.PORT || 20000; // Use the environment variable for the port
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
