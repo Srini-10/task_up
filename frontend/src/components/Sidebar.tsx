@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import TestLogo from "../assets/Test_Outline.svg";

@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import React, { useState, useEffect } from "react";
 import {
   Container,
@@ -5,7 +6,6 @@ import {
   Button,
   Checkbox,
   FormControlLabel,
-  Typography,
   List,
   ListItem,
   ListItemText,
@@ -171,7 +171,7 @@ const EditTest = () => {
     };
 
     try {
-      const response = await axios.put(
+      await axios.put(
         `https://taskup-backend.vercel.app/api/tests/${testId}`,
         updatedTestData
       );
@@ -284,9 +284,7 @@ const EditTest = () => {
     <>
       <Button onClick={BackButton}>Back</Button>
       <Container>
-        <Typography variant="h4" gutterBottom>
-          Edit Test
-        </Typography>
+        <h1>Edit Test</h1>
         <TextField
           label="Test Name"
           value={testName}
@@ -330,9 +328,9 @@ const EditTest = () => {
 
         {authOption === "candidateInfo" && (
           <>
-            <Typography variant="h6" gutterBottom style={{ marginTop: "20px" }}>
+            <h1 variant="h6" gutterBottom style={{ marginTop: "20px" }}>
               Select candidates
-            </Typography>
+            </h1>
             {candidates.map((candidate) => (
               <FormControlLabel
                 key={candidate._id}
@@ -352,9 +350,7 @@ const EditTest = () => {
 
         {showDetails && (
           <>
-            <Typography variant="h6" gutterBottom style={{ marginTop: "20px" }}>
-              Added Questions
-            </Typography>
+            <h1 style={{ marginTop: "20px" }}>Added Questions</h1>
             {questions && questions.length > 0 ? (
               <List>
                 {questions.map((question, index) => (
@@ -398,15 +394,13 @@ const EditTest = () => {
                 ))}
               </List>
             ) : (
-              <Typography>No questions available yet.</Typography>
+              <h1>No questions available yet.</h1>
             )}
 
             {/* Edit Modal */}
             <Modal open={editModalOpen} onClose={() => setEditModalOpen(false)}>
               <Box sx={modalStyle}>
-                <Typography variant="h6" gutterBottom>
-                  Edit Question
-                </Typography>
+                <h1>Edit Question</h1>
                 <TextField
                   label="Question Text"
                   value={editQuestionText}
@@ -425,9 +419,7 @@ const EditTest = () => {
                   fullWidth
                   margin="normal"
                 />
-                <Typography variant="body1" gutterBottom>
-                  Correct Answers:
-                </Typography>
+                <h1>Correct Answers:</h1>
                 {editOptions.map((option, index) => (
                   <FormControlLabel
                     key={index}
@@ -454,7 +446,7 @@ const EditTest = () => {
 
         {editingCandidate && (
           <Box>
-            <Typography variant="h6">Edit candidate</Typography>
+            <h1>Edit candidate</h1>
             <TextField
               label="Register Number"
               value={editingCandidate.registerNumber}

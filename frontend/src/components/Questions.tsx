@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
@@ -441,7 +442,6 @@ const QuestionComponent: React.FC = () => {
       showToast("An error occurred while checking your submission.");
     }
   };
-
   useEffect(() => {
     // Assume this fetches the test name based on testId
     const fetchTestName = async () => {
