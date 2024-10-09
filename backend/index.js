@@ -9,7 +9,7 @@ const app = express();
 require("dotenv").config();
 const allowedOrigins = [
   "https://taskup-brix.vercel.app", // Deployed frontend
-  "http://localhost:3000", // Local development
+  "http://localhost:3001", // Local development
 ];
 
 app.use(

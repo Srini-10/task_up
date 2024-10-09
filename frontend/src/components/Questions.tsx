@@ -180,12 +180,6 @@ const QuestionComponent: React.FC = () => {
     isResizing.current = true;
   };
 
-  // Function to handle pencil size selection
-  const selectPencilSize = (size) => {
-    setLineWidth(size);
-    setIsSizeModalOpen(false); // Close modal after selection
-  };
-
   // Optimized Mouse move event handler using requestAnimationFrame
   const handleMouseMove = useCallback((e) => {
     if (isResizing.current) {
@@ -229,8 +223,6 @@ const QuestionComponent: React.FC = () => {
     let intervalId: NodeJS.Timeout;
 
     if (testStatus === "ongoing" && startTime && endTime) {
-      const now = new Date();
-
       // Set initial remaining time for ongoing tests
       setRemainingTime(calculateTimeDifference(endTime));
 
@@ -783,18 +775,6 @@ const QuestionComponent: React.FC = () => {
     (question) => selectedAnswers[question._id]
   );
   const percentage = (answeredQuestions.length / questions.length) * 100;
-
-  // All questions are mandatory function
-  const areAllQuestionsAnswered = questions.every(
-    (question) => selectedAnswers[question._id]
-  );
-
-  // Selected answers logic (for tracking filled answers)
-  const isAnswerSelected = (questionId: string) => {
-    return (
-      selectedAnswers[questionId] && selectedAnswers[questionId].length > 0
-    );
-  };
 
   const toggleFullScreen = () => {
     if (!fullScreenMode) {

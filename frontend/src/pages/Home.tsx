@@ -11,7 +11,6 @@ import {
 } from "@mui/material";
 
 import AddQuestion from "../components/AddQuestion.tsx";
-// import Addcandidate from "../components/Addcandidate.tsx";
 import axios from "axios";
 import TestContainer from "../components/TestContainer.tsx";
 import SearchIcon from "../assets/Search_Icon.svg";
@@ -21,14 +20,6 @@ import moment from "moment";
 import { showToast } from "../toastUtil.js";
 
 const { Option } = Select;
-
-interface Test {
-  _id: string;
-  testName: string;
-  startDate: string;
-  endDate: string;
-  authOption: string;
-}
 
 const Home = () => {
   const [viewQuestionIndex, setViewQuestionIndex] = useState(null);
