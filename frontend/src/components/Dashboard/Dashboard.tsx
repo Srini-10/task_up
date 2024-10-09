@@ -48,7 +48,7 @@ const Dashboard: React.FC = () => {
   const [tests, setTests] = useState<Test[]>([]);
   const [rankings, setRankings] = useState<Ranking[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedTestId, setSelectedTestId] = useState<string | null>(null);
+  const [setSelectedTestId] = useState<string | null>(null);
 
   // Fetch all tests when the component mounts
   useEffect(() => {

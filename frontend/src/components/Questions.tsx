@@ -49,7 +49,7 @@ const QuestionComponent: React.FC = () => {
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
   const [testStatus, setTestStatus] = useState<string>("");
   const [isTestSubmitted, setIsTestSubmitted] = useState(false);
-  const [totalQuestions, setTotalQuestions] = useState<number | null>(null);
+  const [setTotalQuestions] = useState<number | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -62,9 +62,9 @@ const QuestionComponent: React.FC = () => {
     [key: string]: number[] | number;
   }>(JSON.parse(sessionStorage.getItem("selectedAnswers") || "{}"));
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
-  const [malpractice, setMalpractice] = useState(false);
+  const [setMalpractice] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [score, setScore] = useState<number | null>(null);
+  const [setScore] = useState<number | null>(null);
   const { testId } = useParams<{ testId: string }>();
   const [leftWidth, setLeftWidth] = useState(64);
   const isResizing = useRef(false);
@@ -74,11 +74,11 @@ const QuestionComponent: React.FC = () => {
   const canvasRef = useRef(null);
   const ctxRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [color, setColor] = useState("#000");
-  const [lineWidth, setLineWidth] = useState(3);
+  const [color] = useState("#000");
+  const [lineWidth] = useState(3);
   const [scale, setScale] = useState(1);
-  const [offsetX, setOffsetX] = useState(0);
-  const [offsetY, setOffsetY] = useState(0);
+  const [offsetX] = useState(0);
+  const [offsetY] = useState(0);
 
   // Load bookmark state from sessionStorage when the component mounts
   useEffect(() => {
