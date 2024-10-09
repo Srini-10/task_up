@@ -12,6 +12,7 @@ import {
   TextField,
   FormControl,
   InputLabel,
+  Select,
   MenuItem,
   FormControlLabel,
   Radio,
@@ -28,19 +29,13 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import SearchIcon from "../assets/Search_Icon.svg";
 import DefaultProfile from "../assets/User_Profile.svg";
-import { DatePicker, Form, Input, Modal, Select } from "antd";
+import { DatePicker, Input, Modal } from "antd";
 import moment from "moment";
 
-const { Option } = Select;
-
 const Home = () => {
-  const [questionText, setQuestionText] = useState("");
-  const [questionType, setQuestionType] = useState("");
-  const [options, setOptions] = useState(["", "", "", ""]);
-  const [viewQuestionIndex, setViewQuestionIndex] = useState(null);
+  const [viewQuestionIndex, setViewQuestionIndex] = useState(null); // State for managing which question to view
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [correctAnswerIndices, setCorrectAnswerIndices] = useState([]);
   const [testName, setTestName] = useState(
     localStorage.getItem("testName") || ""
   );
@@ -59,13 +54,6 @@ const Home = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectAll, setSelectAll] = useState(false);
-
-  const [questionTypes] = useState([
-    "Multiple Choice",
-    "Select",
-    "Radio",
-    "Text Input",
-  ]);
 
   // Load questions from localStorage when the component mounts
   useEffect(() => {
@@ -232,61 +220,6 @@ const Home = () => {
     setSelectAll(!selectAll); // Toggle select all state
   };
 
-  const handleCorrectAnswerSelect = (selectedIndices) => {
-    // Ensure correctAnswerIndices is an array
-    setEditingQuestion((prev) => ({
-      ...prev,
-      correctAnswerIndices: Array.isArray(selectedIndices)
-        ? selectedIndices
-        : [selectedIndices],
-    }));
-  };
-
-  const handleQuestionTextChange = (text) => {
-    setEditingQuestion((prev) => ({ ...prev, questionText: text }));
-  };
-
-  const handleInputTypeChange = (newInputType) => {
-    setEditingQuestion((prev) => ({
-      ...prev,
-      inputType: newInputType,
-      correctAnswerIndices: [],
-    }));
-  };
-
-  const handleOptionChange = (index, value) => {
-    setEditingQuestion((prev) => {
-      const newOptions = [...prev.options];
-      newOptions[index] = value;
-      return { ...prev, options: newOptions };
-    });
-  };
-
-  const handleAddOption = () => {
-    setEditingQuestion((prev) => ({
-      ...prev,
-      options: [...prev.options, ""], // Adding a new empty option
-    }));
-  };
-
-  const handleCorrectAnswerChange = (index) => {
-    setEditingQuestion((prev) => {
-      let updatedCorrectAnswers;
-      if (prev.inputType === "Multiple Choice") {
-        if (prev.correctAnswerIndices.includes(index)) {
-          updatedCorrectAnswers = prev.correctAnswerIndices.filter(
-            (i) => i !== index
-          );
-        } else {
-          updatedCorrectAnswers = [...prev.correctAnswerIndices, index];
-        }
-      } else {
-        updatedCorrectAnswers = [index];
-      }
-      return { ...prev, correctAnswerIndices: updatedCorrectAnswers };
-    });
-  };
-
   const handleViewQuestion = (index) => {
     setViewQuestionIndex(index);
     setIsViewModalOpen(true);
@@ -313,18 +246,16 @@ const Home = () => {
 
   // Handle Editing a question
   const handleEditQuestion = (index) => {
-    const questionToEdit = questions[index];
-    setEditingQuestion({ ...questionToEdit, index });
-    setIsEditModalOpen(true);
+    setEditingQuestion({ ...questions[index], index });
+    // isEditModalOpen(true);
   };
 
   // Handle Saving the Edited Question
   const handleSaveEditedQuestion = () => {
     const updatedQuestions = [...questions];
-    updatedQuestions[editingQuestion.index] = { ...editingQuestion };
+    updatedQuestions[editingQuestion.index] = editingQuestion;
     setQuestions(updatedQuestions);
-    setEditingQuestion(null);
-    setIsEditModalOpen(false);
+    setEditingQuestion(null); // Clear the editing state after saving
   };
 
   // Filtering candidates based on search query
@@ -706,86 +637,133 @@ const Home = () => {
               </Modal>
 
               {editingQuestion && (
-                <Modal
-                  visible={isEditModalOpen}
-                  onCancel={() => setIsEditModalOpen(false)}
-                  onOk={handleSaveEditedQuestion}
-                >
-                  {editingQuestion && (
-                    <div>
-                      <TextField
-                        label="Question Text"
-                        value={editingQuestion.questionText}
-                        onChange={(e) =>
-                          handleQuestionTextChange(e.target.value)
-                        }
-                        fullWidth
-                        margin="normal"
-                      />
-                      <Select
-                        value={editingQuestion.inputType}
-                        onChange={handleInputTypeChange}
-                        fullWidth
-                      >
-                        {questionTypes.map((type) => (
-                          <Option key={type} value={type}>
-                            {type}
-                          </Option>
-                        ))}
-                      </Select>
+                <Box>
+                  <Typography variant="h6">Edit Question</Typography>
+                  <TextField
+                    label="Question"
+                    value={editingQuestion.questionText}
+                    onChange={(e) =>
+                      setEditingQuestion({
+                        ...editingQuestion,
+                        questionText: e.target.value,
+                      })
+                    }
+                    fullWidth
+                    margin="normal"
+                  />
+                  <FormControl fullWidth margin="normal">
+                    <InputLabel>Question Type</InputLabel>
+                    <Select
+                      value={editingQuestion.inputType}
+                      onChange={(e) =>
+                        setEditingQuestion((prev) => ({
+                          ...prev,
+                          inputType: e.target.value,
+                          correctAnswerIndices: [],
+                        }))
+                      }
+                    >
+                      {inputTypes.map((type, index) => (
+                        <MenuItem key={index} value={type}>
+                          {type}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
 
+                  {/* Display options only if it's not a Text Input */}
+                  {editingQuestion.inputType !== "Text Input" && (
+                    <>
+                      <Typography>Options</Typography>
                       {editingQuestion.options.map((option, index) => (
                         <TextField
                           key={index}
                           label={`Option ${index + 1}`}
                           value={option}
                           onChange={(e) =>
-                            handleOptionChange(index, e.target.value)
+                            setEditingQuestion((prev) => {
+                              const newOptions = [...prev.options];
+                              newOptions[index] = e.target.value;
+                              return { ...prev, options: newOptions };
+                            })
                           }
                           fullWidth
                           margin="normal"
                         />
                       ))}
-
-                      {editingQuestion.inputType === "Multiple Choice" ? (
-                        <Form.Item label="Select Correct Answers">
-                          <Select
-                            mode="multiple"
-                            value={editingQuestion.correctAnswerIndices}
-                            onChange={(selectedIndices) =>
-                              handleCorrectAnswerSelect(selectedIndices)
-                            }
-                          >
-                            {editingQuestion.options.map((option, index) => (
-                              <Option key={index} value={index}>
-                                {`Option ${index + 1}: ${option}`}
-                              </Option>
-                            ))}
-                          </Select>
-                        </Form.Item>
-                      ) : (
-                        <Form.Item label="Select Correct Answer">
-                          <Select
-                            value={editingQuestion.correctAnswerIndices[0]}
-                            onChange={(selectedIndex) =>
-                              handleCorrectAnswerSelect([selectedIndex])
-                            }
-                          >
-                            {editingQuestion.options.map((option, index) => (
-                              <Option key={index} value={index}>
-                                {`Option ${index + 1}: ${option}`}
-                              </Option>
-                            ))}
-                          </Select>
-                        </Form.Item>
-                      )}
-
-                      <Button onClick={handleSaveEditedQuestion}>
-                        Save Question
-                      </Button>
-                    </div>
+                    </>
                   )}
-                </Modal>
+
+                  {/* Radio button correct answer logic */}
+                  {editingQuestion.inputType === "Radio" && (
+                    <Box>
+                      <Typography>Correct Answer</Typography>
+                      {editingQuestion.options.map((option, index) => (
+                        <FormControlLabel
+                          key={index}
+                          control={
+                            <Radio
+                              checked={editingQuestion.correctAnswerIndices.includes(
+                                index
+                              )}
+                              onChange={() => {
+                                setEditingQuestion((prev) => ({
+                                  ...prev,
+                                  correctAnswerIndices: [index], // Only one correct answer allowed for Radio
+                                }));
+                              }}
+                            />
+                          }
+                          label={option}
+                        />
+                      ))}
+                    </Box>
+                  )}
+
+                  {/* Checkbox correct answers logic */}
+                  {editingQuestion.inputType === "Checkbox" && (
+                    <Box>
+                      <Typography>Correct Answers</Typography>
+                      {editingQuestion.options.map((option, index) => (
+                        <FormControlLabel
+                          key={index}
+                          control={
+                            <Checkbox
+                              checked={editingQuestion.correctAnswerIndices.includes(
+                                index
+                              )}
+                              onChange={() => {
+                                setEditingQuestion((prev) => {
+                                  const updatedCorrectAnswers =
+                                    prev.correctAnswerIndices.includes(index)
+                                      ? prev.correctAnswerIndices.filter(
+                                          (i) => i !== index
+                                        )
+                                      : [...prev.correctAnswerIndices, index];
+                                  return {
+                                    ...prev,
+                                    correctAnswerIndices: updatedCorrectAnswers,
+                                  };
+                                });
+                              }}
+                            />
+                          }
+                          label={option}
+                        />
+                      ))}
+                    </Box>
+                  )}
+
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleSaveEditedQuestion}
+                    fullWidth
+                    style={{ marginTop: "20px" }}
+                  >
+                    Save Question
+                  </Button>
+                </Box>
               )}
             </>
           )}

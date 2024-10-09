@@ -1,7 +1,7 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import HomeLogo from "../assets/Home_Outline.svg";
-import HomeFilledLogo from "../assets/Home_Filled.svg";
+import TestLogo from "../assets/Test_Outline.svg";
+import TestFilledLogo from "../assets/Test_Filled.svg";
 import AssessmentLogo from "../assets/Assessment_Outline.svg";
 import AssessmentFilledLogo from "../assets/Assessment_Filled.svg";
 import DashboardLogo from "../assets/Dashboard_Outline.svg";
@@ -19,20 +19,20 @@ const Sidebar = () => {
   const menuItems = [
     {
       name: "Test",
-      logo: HomeFilledLogo,
-      filledLogo: HomeLogo,
+      logo: TestLogo,
+      filledLogo: TestFilledLogo,
       path: "/",
     },
     {
       name: "Dashboard",
-      logo: DashboardFilledLogo,
-      filledLogo: DashboardLogo,
+      logo: DashboardLogo,
+      filledLogo: DashboardFilledLogo,
       path: "/dashboard",
     },
     {
       name: "Assessment",
-      logo: AssessmentFilledLogo,
-      filledLogo: AssessmentLogo,
+      logo: AssessmentLogo,
+      filledLogo: AssessmentFilledLogo,
       path: "/assessment",
     },
     {
@@ -61,14 +61,16 @@ const Sidebar = () => {
   };
 
   return (
-    <div className="flex flex-col h-full w-full pt-10 pb-5 justify-between">
+    <div className="flex flex-col h-full w-full pt-10 pb-5 justify-between shadow-black shadow-inner">
       <div className="w-full h-full flex flex-col justify-start items-end gap-5">
         {menuItems.slice(0, 2).map((item) => (
           <div
             key={item.path}
             onClick={() => handleClick(item.path)}
             className={`flex gap-3 items-center justify-start pl-4 rounded-tl-xl rounded-bl-xl w-[80%] h-[45px] cursor-pointer ${
-              location.pathname === item.path ? "Shadow bg-[#cfe1e5]" : ""
+              location.pathname === item.path
+                ? "shadow-gray-500 shadow-inner bg-[#cfe1e5]"
+                : ""
             }`}
           >
             <img
@@ -96,7 +98,9 @@ const Sidebar = () => {
             key={item.path}
             onClick={() => handleClick(item.path)}
             className={`flex gap-3 items-center justify-start pl-4 rounded-tl-xl rounded-bl-xl w-[80%] h-[45px] cursor-pointer ${
-              location.pathname === item.path ? "Shadow bg-[#cfe1e5]" : ""
+              location.pathname === item.path
+                ? "shadow-gray-500 shadow-inner bg-[#cfe1e5]"
+                : ""
             }`}
           >
             <img
@@ -125,7 +129,9 @@ const Sidebar = () => {
             key={item.path}
             onClick={() => handleClick(item.path)}
             className={`flex gap-3 items-center justify-start pl-4 rounded-tl-xl rounded-bl-xl w-[80%] h-[45px] cursor-pointer ${
-              location.pathname === item.path ? "Shadow bg-[#cfe1e5]" : ""
+              location.pathname === item.path
+                ? "shadow-gray-500 shadow-inner bg-[#cfe1e5]"
+                : ""
             }`}
           >
             <img

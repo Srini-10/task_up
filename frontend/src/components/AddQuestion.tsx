@@ -1,13 +1,7 @@
 import React, { useState } from "react";
-import {
-  TextField,
-  Button,
-  Box,
-  MenuItem,
-  Select,
-  InputLabel,
-  FormControl,
-} from "@mui/material";
+import { Input, Button, Form, Select } from "antd";
+
+const { Option } = Select;
 
 const AddQuestion = ({ questions, setQuestions }) => {
   const [questionText, setQuestionText] = useState("");
@@ -49,8 +43,7 @@ const AddQuestion = ({ questions, setQuestions }) => {
   };
 
   // Handle selection of correct answers
-  const handleCorrectAnswerChange = (event) => {
-    const value = event.target.value;
+  const handleCorrectAnswerChange = (value) => {
     if (questionType === "Multiple Choice") {
       setCorrectAnswerIndices(value); // Allow multiple correct answers
     } else if (questionType === "Select" || questionType === "Radio") {
@@ -66,13 +59,11 @@ const AddQuestion = ({ questions, setQuestions }) => {
       questionType === "Radio"
     ) {
       return options.map((option, index) => (
-        <TextField
-          key={index}
-          label={`Option ${index + 1}`}
+        <Input
+          className="w-full min-h-[40px] my-1"
+          placeholder={`Option ${index + 1}`}
           value={option}
           onChange={(e) => handleOptionChange(index, e.target.value)}
-          fullWidth
-          margin="normal"
         />
       ));
     }
@@ -83,82 +74,91 @@ const AddQuestion = ({ questions, setQuestions }) => {
   const renderCorrectAnswerInput = () => {
     if (questionType === "Multiple Choice") {
       return (
-        <FormControl fullWidth margin="normal">
-          <InputLabel id="correct-answer-label">
-            Select Correct Answers
-          </InputLabel>
+        <Form.Item className="mt-3" label="Select Correct Answers">
           <Select
-            labelId="correct-answer-label"
-            multiple
+            className="w-full min-h-[40px] -mt-1"
+            mode="multiple"
             value={correctAnswerIndices}
             onChange={handleCorrectAnswerChange}
-            renderValue={(selected) =>
-              selected
-                .map(
-                  (i) => `Option ${parseInt(i) + 1}: ${options[parseInt(i)]}`
-                )
-                .join(", ")
-            }
+            placeholder="Correct Answers"
           >
             {options.map((option, index) => (
-              <MenuItem key={index} value={index}>
-                {`Option ${index + 1}: ${option || `Option ${index + 1}`}`}
-              </MenuItem>
+              <Option key={index} value={index}>
+                {`${option || `Option ${index + 1}`}`}
+              </Option>
             ))}
           </Select>
-        </FormControl>
+        </Form.Item>
       );
     } else if (questionType === "Select" || questionType === "Radio") {
       return (
-        <FormControl fullWidth margin="normal">
-          <InputLabel id="correct-answer-label-single">
-            Select Correct Answer
-          </InputLabel>
+        <Form.Item className="mt-3" label="Select Correct Answers">
           <Select
-            labelId="correct-answer-label-single"
+            className="w-full min-h-[40px] -mt-1"
             value={
-              correctAnswerIndices.length > 0 ? correctAnswerIndices[0] : ""
-            } // Check if there's a selected value
+              correctAnswerIndices.length > 0
+                ? correctAnswerIndices[0]
+                : undefined
+            }
             onChange={handleCorrectAnswerChange}
+            placeholder="Correct Answer"
           >
             {options.map((option, index) => (
-              <MenuItem key={index} value={index}>
-                {`Option ${index + 1}: ${option || `Option ${index + 1}`}`}
-              </MenuItem>
+              <Option key={index} value={index}>
+                {`${option || `Option ${index + 1}`}`}
+              </Option>
             ))}
           </Select>
-        </FormControl>
+        </Form.Item>
       );
     }
-    return null; // No correct answer needed for Text Input
+    return null;
   };
 
   return (
-    <Box>
-      <TextField
-        label="Question"
+    <Form layout="vertical">
+      <Input
+        className="mt-2"
+        style={{
+          width: "100%",
+          backgroundColor: "#ffffff",
+          borderRadius: "8px",
+          border: "1px solid #d1d5db",
+          boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+          padding: "8px 12px",
+        }}
         value={questionText}
         onChange={(e) => setQuestionText(e.target.value)}
-        fullWidth
-        margin="normal"
+        placeholder="Enter your question"
       />
 
       {/* Select box for choosing the question type */}
-      <FormControl fullWidth margin="normal">
-        <InputLabel id="question-type-label">Select Question Type</InputLabel>
-        <Select
-          labelId="question-type-label"
-          value={questionType}
-          onChange={(e) => setQuestionType(e.target.value)}
-          label="Select Question Type"
-        >
-          {questionTypes.map((type, index) => (
-            <MenuItem key={index} value={type}>
-              {type}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+
+      <Select
+        placeholder="Select Question Type"
+        className="w-full min-h-[40px] rounded-[8px] mt-2 mb-3"
+        style={{
+          boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+        }}
+        value={questionType}
+        onChange={(value) => setQuestionType(value)}
+      >
+        {/* Placeholder option */}
+        <Option value="" disabled>
+          <p className="text-neutral-400 opacity-70">Select Question Type</p>
+        </Option>
+
+        {questionTypes.map((type, index) => (
+          <Option key={index} value={type}>
+            {type}
+          </Option>
+        ))}
+      </Select>
+
+      {/* Conditionally display "Add options" if renderOptionsInput() returns something */}
+      {renderOptionsInput() && (
+        <h1 className="text-[#000000] text-[14px] mt-1">Add options</h1>
+      )}
 
       {/* Render dynamic inputs based on selected question type */}
       {renderOptionsInput()}
@@ -167,17 +167,28 @@ const AddQuestion = ({ questions, setQuestions }) => {
       {renderCorrectAnswerInput()}
 
       {/* Button to add the question */}
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={handleAddQuestion}
-        fullWidth
-        style={{ marginTop: "20px" }}
-        disabled={questionText === "" || questionType === ""}
-      >
-        Add Question
-      </Button>
-    </Box>
+      <div className="w-full flex justify-start">
+        <Button
+          onClick={handleAddQuestion}
+          disabled={questionText === "" || questionType === ""}
+          style={{
+            background: "#083344",
+            color: "#fff",
+            padding: "20px",
+          }}
+        >
+          <p
+            className="poppins text-[15px] px-1.5 normal-case text-white"
+            style={{
+              textDecorationThickness: "1.5px",
+              textUnderlineOffset: "2px",
+            }}
+          >
+            Add Question
+          </p>
+        </Button>
+      </div>
+    </Form>
   );
 };
 
