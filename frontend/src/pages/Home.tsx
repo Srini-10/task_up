@@ -103,7 +103,6 @@ const Home = () => {
   };
 
   useEffect(() => {
-    // Load candidates from localStorage or API when component mounts
     const storedCandidates = JSON.parse(localStorage.getItem("candidates"));
     const storedSelectedCandidates = JSON.parse(
       localStorage.getItem("selectedCandidates")
@@ -112,7 +111,7 @@ const Home = () => {
     if (storedCandidates && storedCandidates.length > 0) {
       setCandidates(storedCandidates);
     } else {
-      fetchCandidates(); // Fetch from the API only if not in localStorage
+      fetchCandidates();
     }
 
     if (storedSelectedCandidates) {
