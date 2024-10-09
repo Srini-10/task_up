@@ -6,7 +6,6 @@ import { styled } from "@mui/material/styles";
 import Checkbox, { CheckboxProps } from "@mui/material/Checkbox";
 import Confetti from "react-confetti";
 import useWindowSize from "react-use/lib/useWindowSize";
-import axios from "axios";
 import {
   Radio,
   RadioGroup,
@@ -298,7 +297,7 @@ const QuestionComponent: React.FC = () => {
         );
       };
     }
-  }, [isAuthenticated, isTestSubmitted]);
+  }, [isAuthenticated, handleVisibilityChange, isTestSubmitted]);
 
   // Effect to check tab switch count and auto-submit test if needed
   useEffect(() => {
@@ -307,7 +306,7 @@ const QuestionComponent: React.FC = () => {
       console.log("Auto-submitting due to excessive tab switches");
       handleSubmit(null, true); // Automatically submit the test with malpractice flag
     }
-  }, [tabSwitchCount, isTestSubmitted]);
+  }, [tabSwitchCount, handleSubmit, isTestSubmitted, setMalpractice]);
 
   // Effect to check remaining time and submit test automatically
   useEffect(() => {
@@ -315,7 +314,7 @@ const QuestionComponent: React.FC = () => {
       console.log("Auto-submitting due to time expiration");
       handleSubmit(null, true); // Automatically submit the test
     }
-  }, [remainingTime, isTestSubmitted]);
+  }, [remainingTime, handleSubmit, isTestSubmitted]);
 
   useEffect(() => {
     const fetchTestData = async () => {
@@ -574,104 +573,103 @@ const QuestionComponent: React.FC = () => {
     }));
   };
 
-  const handleSubmit = async (
-    event: React.FormEvent<HTMLFormElement> | null = null,
-    isMalpractice = false
-  ) => {
-    if (event) event.preventDefault();
+  import React from "react";
+  import axios from "axios";
 
-    // Retrieve authentication data from session storage
-    const authData = JSON.parse(sessionStorage.getItem("authData") || "{}");
-    const email = authData.email;
-    const registerNumber = authData.registerNumber;
+  const handleSubmit = useCallback(
+    async (
+      event: React.FormEvent<HTMLFormElement> | null = null,
+      isMalpractice = false
+    ) => {
+      if (event) event.preventDefault();
 
-    // Log the fetched values
-    console.log("Fetched Email:", email);
-    console.log("Fetched Register Number:", registerNumber);
+      // Retrieve authentication data from session storage
+      const authData = JSON.parse(sessionStorage.getItem("authData") || "{}");
+      const email = authData.email;
+      const registerNumber = authData.registerNumber;
 
-    // Check for empty values
-    if (!email && !registerNumber) {
-      showToast("Authentication details not available. Please login again.");
-      return;
-    }
+      // Log the fetched values
+      console.log("Fetched Email:", email);
+      console.log("Fetched Register Number:", registerNumber);
 
-    try {
-      // Convert selected answers to an array of objects for answers field
-      const answers = Object.entries(selectedAnswers).map(
-        ([questionId, selectedAnswer]) => {
-          const question = questions.find((q) => q._id === questionId);
-          return {
-            questionId,
-            questionText: question?.questionText,
-            selectedAnswer: selectedAnswer ? String(selectedAnswer) : "",
-          };
-        }
-      );
+      // Check for empty values
+      if (!email || !registerNumber) {
+        showToast("Authentication details not available. Please login again.");
+        return;
+      }
 
-      console.log("Prepared answers:", answers);
+      try {
+        // Convert selected answers to an array of objects for answers field
+        const answers = Object.entries(selectedAnswers).map(
+          ([questionId, selectedAnswer]) => {
+            const question = questions.find((q) => q._id === questionId);
+            return {
+              questionId,
+              questionText: question?.questionText,
+              selectedAnswer: selectedAnswer ? String(selectedAnswer) : "",
+            };
+          }
+        );
 
-      // Submit answers and get the score
-      const submissionResponse = await axios.post(
-        `https://taskup-backend.vercel.app/api/tests/${testId}/submit`,
-        {
-          email,
-          registerNumber,
-          answers,
-          questions,
-          malpractice: isMalpractice,
-        }
-      );
+        console.log("Prepared answers:", answers);
 
-      // Handle the response
-      const { score, totalQuestions } = submissionResponse.data;
-      setScore(score);
-      setTotalQuestions(totalQuestions);
+        // Submit answers and get the score
+        const submissionResponse = await axios.post(
+          `https://taskup-backend.vercel.app/api/tests/${testId}/submit`,
+          {
+            email,
+            registerNumber,
+            answers,
+            questions,
+            malpractice: isMalpractice,
+          }
+        );
 
-      // Prepare payload for saving submission
-      const saveSubmissionPayload = {
-        email,
-        registerNumber,
-        answers,
-        score,
-        questions,
-        malpractice: isMalpractice,
-      };
+        // Handle the response
+        const { score, totalQuestions } = submissionResponse.data;
+        setScore(score);
+        setTotalQuestions(totalQuestions);
 
-      console.log("Saving submission with payload:", saveSubmissionPayload);
-
-      // Save the submission
-      await axios.post(
-        `https://taskup-backend.vercel.app/api/tests/${testId}/save-submission`,
-        {
+        // Prepare payload for saving submission
+        const saveSubmissionPayload = {
           email,
           registerNumber,
           answers,
           score,
           questions,
           malpractice: isMalpractice,
-        }
-      );
+        };
 
-      // Set the successful submission flag to true
-      setIsSubmissionSuccessful(true);
+        console.log("Saving submission with payload:", saveSubmissionPayload);
 
-      // Store submission status in localStorage
-      localStorage.setItem("isTestSubmitted", "true");
-      localStorage.setItem("isSubmissionSuccessful", "true");
-      sessionStorage.setItem("score", score.toString());
-      sessionStorage.setItem("totalQuestions", totalQuestions.toString());
+        // Save the submission
+        await axios.post(
+          `https://taskup-backend.vercel.app/api/tests/${testId}/save-submission`,
+          saveSubmissionPayload // Use the prepared payload directly
+        );
 
-      // showToast(
-      //   "Test submitted successfully! Score: " + score + "/" + totalQuestions
-      // );
-    } catch (error) {
-      console.error("Error during submission:", error);
-      showToast(
-        "An error occurred during submission: " +
-          (error.response?.data?.message || error.message)
-      );
+        // Set the successful submission flag to true
+        setIsSubmissionSuccessful(true);
+
+        // Store submission status in localStorage
+        localStorage.setItem("isTestSubmitted", "true");
+        localStorage.setItem("isSubmissionSuccessful", "true");
+        sessionStorage.setItem("score", score.toString());
+        sessionStorage.setItem("totalQuestions", totalQuestions.toString());
+
+        // Optional success toast message
+        showToast(
+          `Test submitted successfully! Score: ${score}/${totalQuestions}`
+        );
+      } catch (error) {
+        console.error("Error during submission:", error);
+        showToast(
+          "An error occurred during submission: " +
+            (error.response?.data?.message || error.message)
+        );
+      }
     }
-  };
+  );
 
   useEffect(() => {
     // Check sessionStorage for submission status
