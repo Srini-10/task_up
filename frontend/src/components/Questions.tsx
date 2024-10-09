@@ -1,5 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import { styled } from "@mui/material/styles";
@@ -572,9 +573,6 @@ const QuestionComponent: React.FC = () => {
       [questionId]: selectedOption,
     }));
   };
-
-  import React from "react";
-  import axios from "axios";
 
   const handleSubmit = useCallback(
     async (
