@@ -1,52 +1,48 @@
 import React, { useState, useEffect } from "react";
 import {
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  Typography,
   List,
   ListItem,
-  ListItemText,
-  Box,
-  TextField,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  FormControlLabel,
-  Radio,
+  CircularProgress,
   Checkbox,
   Button,
+  TextField,
+  Alert,
 } from "@mui/material";
 
 import AddQuestion from "../components/AddQuestion.tsx";
 // import Addcandidate from "../components/Addcandidate.tsx";
 import axios from "axios";
 import TestContainer from "../components/TestContainer.tsx";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import VisibilityIcon from "@mui/icons-material/Visibility";
 import SearchIcon from "../assets/Search_Icon.svg";
 import DefaultProfile from "../assets/User_Profile.svg";
-import { DatePicker, Form, Input, Modal, Select } from "antd";
+import { DatePicker, Form, Input, Modal, Select, Popconfirm } from "antd";
 import moment from "moment";
+import { showToast } from "../toastUtil.js";
 
 const { Option } = Select;
 
+interface Test {
+  _id: string;
+  testName: string;
+  startDate: string;
+  endDate: string;
+  authOption: string;
+}
+
 const Home = () => {
-  const [questionText, setQuestionText] = useState("");
-  const [questionType, setQuestionType] = useState("");
-  const [options, setOptions] = useState(["", "", "", ""]);
   const [viewQuestionIndex, setViewQuestionIndex] = useState(null);
+  const [editQuestionIndex, setEditQuestionIndex] = useState(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [correctAnswerIndices, setCorrectAnswerIndices] = useState([]);
   const [testName, setTestName] = useState(
     localStorage.getItem("testName") || ""
   );
   const [startDate, setStartDate] = useState(
     localStorage.getItem("startDate") || ""
   );
+  const [warning, setWarning] = useState("");
   const [endDate, setEndDate] = useState(localStorage.getItem("endDate") || "");
   const [authOption, setAuthOption] = useState("candidateInfo");
   const [password, setPassword] = useState("");
@@ -137,6 +133,16 @@ const Home = () => {
 
   const handleCreateTest = async (event) => {
     event.preventDefault();
+    setLoading(true);
+    setWarning("");
+
+    // Validate required fields
+    if (!testName || !startDate || !endDate) {
+      setWarning("Please fill in all required fields.");
+      setLoading(false);
+      return;
+    }
+
     // Find the selected candidates by matching _id with selectedCandidates array
     const selectedCandidateData = candidates
       .filter((candidate) => selectedCandidates.includes(candidate._id))
@@ -170,10 +176,12 @@ const Home = () => {
         testData
       );
       console.log(response.data);
-      alert("Test created successfully!");
+      showToast("Test created successfully!");
       resetForm();
     } catch (error) {
-      alert("An error occurred while creating the test.");
+      showToast("An error occurred while creating the test.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -262,31 +270,6 @@ const Home = () => {
     });
   };
 
-  const handleAddOption = () => {
-    setEditingQuestion((prev) => ({
-      ...prev,
-      options: [...prev.options, ""], // Adding a new empty option
-    }));
-  };
-
-  const handleCorrectAnswerChange = (index) => {
-    setEditingQuestion((prev) => {
-      let updatedCorrectAnswers;
-      if (prev.inputType === "Multiple Choice") {
-        if (prev.correctAnswerIndices.includes(index)) {
-          updatedCorrectAnswers = prev.correctAnswerIndices.filter(
-            (i) => i !== index
-          );
-        } else {
-          updatedCorrectAnswers = [...prev.correctAnswerIndices, index];
-        }
-      } else {
-        updatedCorrectAnswers = [index];
-      }
-      return { ...prev, correctAnswerIndices: updatedCorrectAnswers };
-    });
-  };
-
   const handleViewQuestion = (index) => {
     setViewQuestionIndex(index);
     setIsViewModalOpen(true);
@@ -313,6 +296,7 @@ const Home = () => {
 
   // Handle Editing a question
   const handleEditQuestion = (index) => {
+    setEditQuestionIndex(index);
     const questionToEdit = questions[index];
     setEditingQuestion({ ...questionToEdit, index });
     setIsEditModalOpen(true);
@@ -325,6 +309,17 @@ const Home = () => {
     setQuestions(updatedQuestions);
     setEditingQuestion(null);
     setIsEditModalOpen(false);
+  };
+
+  const handleDeleteQuestion = (index) => {
+    const updatedQuestions = [...questions];
+    updatedQuestions.splice(index, 1);
+    setQuestions(updatedQuestions);
+    console.log(`Question at index ${index} deleted.`);
+  };
+
+  const handleConfirmDelete = (index) => {
+    handleDeleteQuestion(index);
   };
 
   // Filtering candidates based on search query
@@ -341,12 +336,14 @@ const Home = () => {
   return (
     <>
       <div className="flex justify-between gap-6">
-        <div className="w-full p-6">
+        <div className="w-full p-6 h-[calc(100vh-50px)] overflow-y-scroll scroll-smooth">
           <TestContainer />
         </div>
-        <div className="min-w-[450px] shadow-gray-300 p-6 shadow-inner">
+        <div className="min-w-[450px] shadow-gray-300 p-6 shadow-inner h-[calc(100vh-50px)] overflow-y-scroll scroll-smooth">
+          {warning && <Alert severity="warning">{warning}</Alert>}
           <h1 className="text-[25px] poppins2 text-[#083344]">Create Test</h1>
           <Input
+            required
             placeholder="Test Name"
             value={testName}
             onChange={(e) => setTestName(e.target.value)}
@@ -361,10 +358,16 @@ const Home = () => {
             }}
           />
 
-          <h1 className="poppins2 text-[20px] mt-6">Test Duration</h1>
+          <h1 className="poppins2 text-[20px] mt-6 text-[#083344]">
+            Test Duration
+          </h1>
           <div className="w-full justify-between flex items-center mt-1.5 gap-3">
             <DatePicker
-              showTime
+              required
+              showTime={{
+                format: "HH:mm",
+              }}
+              format="YYYY-MM-DD HH:mm"
               placeholder="Start Date and Time"
               value={startDate ? moment(startDate) : null}
               onChange={(date, dateString) => setStartDate(dateString)}
@@ -378,7 +381,11 @@ const Home = () => {
               }}
             />
             <DatePicker
-              showTime
+              required
+              showTime={{
+                format: "HH:mm",
+              }}
+              format="YYYY-MM-DD HH:mm"
               placeholder="End Date and Time"
               value={endDate ? moment(endDate) : null}
               onChange={(date, dateString) => setEndDate(dateString)}
@@ -422,20 +429,22 @@ const Home = () => {
               <Modal
                 open={modalVisible}
                 onClose={handleCloseModal}
+                closable={false}
+                footer={null}
                 aria-labelledby="select-students-modal-title"
                 aria-describedby="select-students-modal-description"
                 className="flex justify-center items-center"
               >
                 <div
-                  className="w-[50vw] h-[70vh] justify-start flex flex-col  mx-auto"
+                  className="w-[50vw] h-[70vh] justify-start flex flex-col mx-auto"
                   style={{
-                    padding: "20px",
+                    padding: "5px",
                     background: "#fff",
                     borderRadius: "8px",
                   }}
                 >
                   <div className="">
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-start">
                       <h2
                         id="select-students-modal-title"
                         className="poppins2 text-[22px]"
@@ -457,19 +466,18 @@ const Home = () => {
                     </div>
 
                     <div className="flex justify-between items-center">
-                      <div className="flex justify-between items-center gap-1">
-                        <img className="w-7 mt-2" src={SearchIcon} alt="" />
+                      <div className="flex justify-between mt-2 mb-3 items-center gap-1">
+                        <img className="w-7" src={SearchIcon} alt="" />
                         <TextField
-                          className="poppins text-[16px] text-slate-300"
+                          className="poppins text-[16px] font-medium text-slate-300"
                           placeholder="Search candidates"
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          fullWidth
-                          margin="normal"
-                          variant="outlined"
                           size="small"
                           InputProps={{
                             sx: {
+                              color: "gray",
+                              fontWeight: "500",
                               border: "none",
                               outline: "none",
                               "& .MuiOutlinedInput-notchedOutline": {
@@ -579,54 +587,52 @@ const Home = () => {
           {showDetails && (
             <>
               <List>
-                <Typography
-                  variant="h6"
-                  gutterBottom
-                  style={{ marginTop: "20px" }}
-                >
+                <h1 className="poppins2 text-[20px] mb-1 text-[#083344]">
                   Added Questions
-                </Typography>
+                </h1>
                 {questions.map((question, index) => (
                   <>
-                    <ListItem key={index}>
-                      <ListItemText
-                        primary={`Question ${index + 1}: ${
-                          question.questionText
-                        }`}
-                        secondary={`Input Type: ${
-                          question.inputType
-                        } | Options: ${question.options.join(
-                          ", "
-                        )} | Correct Answers: ${
-                          question.correctAnswerIndices.length > 0
-                            ? question.correctAnswerIndices
-                                .map((i) => question.options[i])
-                                .join(", ")
-                            : "N/A"
-                        }`}
-                      />
-                      <IconButton
-                        edge="end"
-                        aria-label="view"
-                        onClick={() => handleViewQuestion(index)}
-                      >
-                        <VisibilityIcon />
-                      </IconButton>
-                      <IconButton
-                        edge="end"
-                        aria-label="edit"
-                        onClick={() => handleEditQuestion(index)}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        edge="end"
-                        aria-label="delete"
-                        onClick={() => handleDeleteQuestion(index)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </ListItem>
+                    <div
+                      key={index}
+                      className="flex justify-between items-start w-[400px] border-b-[1.5px] pb-2 border-gray-100"
+                    >
+                      <h1 className="mt-3 poppins text-[14px] overflow-hidden w-[330px] text-[#000000]">
+                        {index + 1}.{question.questionText}
+                      </h1>
+
+                      <div className="gap-0.5 flex">
+                        <IconButton
+                          edge="end"
+                          aria-label="view"
+                          onClick={() => handleViewQuestion(index)}
+                          className="w-[33px] h-[33px]"
+                        >
+                          <ion-icon name="eye" />
+                        </IconButton>
+                        <IconButton
+                          edge="end"
+                          aria-label="edit"
+                          onClick={() => handleEditQuestion(index)}
+                          className="w-[33px] h-[33px]"
+                        >
+                          <ion-icon name="create-outline" />
+                        </IconButton>
+                        <Popconfirm
+                          title="Are you sure to delete this question?"
+                          onConfirm={() => handleConfirmDelete(index)}
+                          okText="Yes"
+                          cancelText="No"
+                        >
+                          <IconButton
+                            edge="end"
+                            aria-label="delete"
+                            className="w-[33px] h-[33px]"
+                          >
+                            <ion-icon name="trash-outline" />
+                          </IconButton>
+                        </Popconfirm>
+                      </div>
+                    </div>
                   </>
                 ))}
               </List>
@@ -643,10 +649,10 @@ const Home = () => {
                     </button>
                   </div>
                   {viewQuestionIndex !== null && (
-                    <div className="">
+                    <div className="mt-3">
                       {/* Question Title */}
                       <h1 className="poppins text-[16px] text-[#083344]">
-                        {viewQuestionIndex + 1}.{" "}
+                        {viewQuestionIndex + 1}.
                         {questions[viewQuestionIndex].questionText}
                       </h1>
 
@@ -708,24 +714,41 @@ const Home = () => {
               {editingQuestion && (
                 <Modal
                   visible={isEditModalOpen}
-                  onCancel={() => setIsEditModalOpen(false)}
+                  closable={false}
                   onOk={handleSaveEditedQuestion}
+                  footer={null}
                 >
-                  {editingQuestion && (
-                    <div>
-                      <TextField
-                        label="Question Text"
+                  {editingQuestion && editQuestionIndex !== null && (
+                    <div className="mt-1">
+                      <h1 className="poppins2 text-[20px] text-[#083344]">
+                        Question no.{editQuestionIndex + 1}
+                      </h1>
+                      <Input
+                        placeholder="Question Text"
                         value={editingQuestion.questionText}
                         onChange={(e) =>
                           handleQuestionTextChange(e.target.value)
                         }
-                        fullWidth
-                        margin="normal"
+                        style={{
+                          width: "100%",
+                          backgroundColor: "#ffffff",
+                          borderRadius: "8px",
+                          border: "1px solid #d1d5db",
+                          boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                        }}
+                        className="h-[40px] mt-2"
                       />
                       <Select
                         value={editingQuestion.inputType}
                         onChange={handleInputTypeChange}
-                        fullWidth
+                        style={{
+                          width: "100%",
+                          backgroundColor: "#ffffff",
+                          borderRadius: "8px",
+                          border: "0px solid #d1d5db",
+                          boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                        }}
+                        className="h-[40px] mt-2"
                       >
                         {questionTypes.map((type) => (
                           <Option key={type} value={type}>
@@ -734,55 +757,100 @@ const Home = () => {
                         ))}
                       </Select>
 
-                      {editingQuestion.options.map((option, index) => (
-                        <TextField
-                          key={index}
-                          label={`Option ${index + 1}`}
-                          value={option}
-                          onChange={(e) =>
-                            handleOptionChange(index, e.target.value)
-                          }
-                          fullWidth
-                          margin="normal"
-                        />
-                      ))}
+                      {editingQuestion.inputType !== "Text Input" ? (
+                        <div className="mt-4">
+                          <h1 className="text-[16px] poppins text-[#083344]">
+                            Options:
+                          </h1>
+                          {editingQuestion.options.map((option, index) => (
+                            <Input
+                              key={index}
+                              placeholder={`Option ${index + 1}`}
+                              style={{
+                                width: "100%",
+                                backgroundColor: "#ffffff",
+                                borderRadius: "8px",
+                                border: "1px solid #d1d5db",
+                                boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                              }}
+                              className="h-[40px] my-1"
+                              value={option}
+                              onChange={(e) =>
+                                handleOptionChange(index, e.target.value)
+                              }
+                              margin="normal"
+                            />
+                          ))}
 
-                      {editingQuestion.inputType === "Multiple Choice" ? (
-                        <Form.Item label="Select Correct Answers">
-                          <Select
-                            mode="multiple"
-                            value={editingQuestion.correctAnswerIndices}
-                            onChange={(selectedIndices) =>
-                              handleCorrectAnswerSelect(selectedIndices)
-                            }
-                          >
-                            {editingQuestion.options.map((option, index) => (
-                              <Option key={index} value={index}>
-                                {`Option ${index + 1}: ${option}`}
-                              </Option>
-                            ))}
-                          </Select>
-                        </Form.Item>
+                          {editingQuestion.inputType === "Multiple Choice" ? (
+                            <Form.Item>
+                              <h1 className="text-[16px] mt-4 poppins text-[#083344]">
+                                Correct Answer:
+                              </h1>
+                              <Select
+                                mode="multiple"
+                                style={{
+                                  width: "100%",
+                                  backgroundColor: "#ffffff",
+                                  borderRadius: "8px",
+                                  border: "0px solid #d1d5db",
+                                  boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                                }}
+                                className="h-[40px] mt-1"
+                                value={editingQuestion.correctAnswerIndices}
+                                onChange={(selectedIndices) =>
+                                  handleCorrectAnswerSelect(selectedIndices)
+                                }
+                              >
+                                {editingQuestion.options.map(
+                                  (option, index) => (
+                                    <Option key={index} value={index}>
+                                      {`${option}` || `Option ${index + 1}`}
+                                    </Option>
+                                  )
+                                )}
+                              </Select>
+                            </Form.Item>
+                          ) : (
+                            <Form.Item>
+                              <Select
+                                value={editingQuestion.correctAnswerIndices[0]}
+                                onChange={(selectedIndex) =>
+                                  handleCorrectAnswerSelect([selectedIndex])
+                                }
+                              >
+                                {editingQuestion.options.map(
+                                  (option, index) => (
+                                    <Option key={index} value={index}>
+                                      {`Option ${index + 1}: ${option}`}
+                                    </Option>
+                                  )
+                                )}
+                              </Select>
+                            </Form.Item>
+                          )}
+                        </div>
                       ) : (
-                        <Form.Item label="Select Correct Answer">
-                          <Select
-                            value={editingQuestion.correctAnswerIndices[0]}
-                            onChange={(selectedIndex) =>
-                              handleCorrectAnswerSelect([selectedIndex])
-                            }
-                          >
-                            {editingQuestion.options.map((option, index) => (
-                              <Option key={index} value={index}>
-                                {`Option ${index + 1}: ${option}`}
-                              </Option>
-                            ))}
-                          </Select>
-                        </Form.Item>
+                        // Display message when the question type is 'Text Input'
+                        <p className="mt-3 text-gray-600">
+                          No options needed for Text Input questions.
+                        </p>
                       )}
 
-                      <Button onClick={handleSaveEditedQuestion}>
-                        Save Question
-                      </Button>
+                      <div className="w-full flex justify-end gap-3">
+                        <button
+                          className="px-4 py-2 rounded-lg text-white font-semibold bg-[#8298a2]"
+                          onClick={() => setIsEditModalOpen(false)}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          className="px-4 py-2 rounded-lg text-white font-semibold bg-[#083344]"
+                          onClick={handleSaveEditedQuestion}
+                        >
+                          Save Question
+                        </button>
+                      </div>
                     </div>
                   )}
                 </Modal>
@@ -794,34 +862,12 @@ const Home = () => {
             <Button
               variant="contained"
               color="primary"
-              onClick={handleCreateTest}
-              style={{
-                width: "100%",
-                marginBottom: "20px",
-                marginTop: "20px",
-                background: "#083344",
-                color: "#fff",
-              }}
-            >
-              <p
-                className="poppins text-[15px] px-0.5 normal-case text-white"
-                style={{
-                  textDecorationThickness: "1.5px",
-                  textUnderlineOffset: "2px",
-                }}
-              >
-                Create Test
-              </p>
-            </Button>
-            <Button
-              variant="contained"
-              color="primary"
               onClick={resetForm}
               style={{
                 width: "100%",
                 marginBottom: "20px",
                 marginTop: "20px",
-                background: "#083344",
+                background: "#8298a2",
                 color: "#fff",
               }}
             >
@@ -833,6 +879,35 @@ const Home = () => {
                 }}
               >
                 Reset Test Details
+              </p>
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleCreateTest}
+              style={{
+                width: "100%",
+                marginBottom: "20px",
+                marginTop: "20px",
+                background: "#083344",
+                color: "#fff",
+              }}
+              disabled={loading}
+            >
+              {loading ? (
+                <CircularProgress
+                  size={24}
+                  style={{ color: "#fff", marginRight: "10px" }}
+                /> // Loading spinner
+              ) : null}
+              <p
+                className="poppins text-[15px] px-0.5 normal-case text-white"
+                style={{
+                  textDecorationThickness: "1.5px",
+                  textUnderlineOffset: "2px",
+                }}
+              >
+                {loading ? "Creating..." : "Create Test"}
               </p>
             </Button>
           </div>

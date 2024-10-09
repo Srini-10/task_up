@@ -13,7 +13,7 @@ function App() {
           <div className="w-[350px] h-full overflow-y-scroll bg-[#05202b]">
             <Sidebar />
           </div>
-          <div className="w-full h-full overflow-y-scroll">
+          <div className="w-full h-full">
             <AppRouter />
           </div>
         </div>

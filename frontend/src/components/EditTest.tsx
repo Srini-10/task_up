@@ -18,6 +18,7 @@ import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import { showToast } from "../toastUtil.js";
 
 const EditTest = () => {
   const navigate = useNavigate();
@@ -117,7 +118,7 @@ const EditTest = () => {
         );
       } catch (error) {
         console.error("Error fetching test details:", error);
-        alert("An error occurred while fetching test details.");
+        showToast("An error occurred while fetching test details.");
       }
     };
 
@@ -174,13 +175,13 @@ const EditTest = () => {
         `https://taskup-backend.vercel.app/api/tests/${testId}`,
         updatedTestData
       );
-      alert("Test updated successfully!");
+      showToast("Test updated successfully!");
       sessionStorage.removeItem(`test-questions-${testId}`);
       sessionStorage.removeItem("candidates");
       setShowDetails(false);
     } catch (error) {
       console.error("Error updating test:", error);
-      alert(
+      showToast(
         "An error occurred while updating the test: " +
           error.response?.data?.message || error.message
       );
@@ -249,11 +250,11 @@ const EditTest = () => {
         _id: questions[editQuestionIndex]._id, // Ensure the ID remains unchanged
       };
       setQuestions(updatedQuestions);
-      alert("Question updated successfully!");
+      showToast("Question updated successfully!");
       setEditModalOpen(false);
     } catch (error) {
       console.error("Error updating question:", error);
-      alert("An error occurred while updating the question.");
+      showToast("An error occurred while updating the question.");
     }
   };
 

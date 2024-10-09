@@ -167,7 +167,7 @@ const AddQuestion = ({ questions, setQuestions }) => {
       {renderCorrectAnswerInput()}
 
       {/* Button to add the question */}
-      <div className="w-full flex justify-start">
+      <div className="w-full flex justify-end">
         <Button
           onClick={handleAddQuestion}
           disabled={questionText === "" || questionType === ""}
