@@ -36,12 +36,11 @@ const TestContainer: React.FC = () => {
     fetchTests();
   }, []);
 
-  const handleConfirmDelete = (index) => {
-    handleDeleteTest(index);
+  const handleConfirmDelete = (testId: string) => {
+    handleDeleteTest(testId);
   };
 
-  // Function to handle test deletionxw
-  const handleDeleteTest = async (testId) => {
+  const handleDeleteTest = async (testId: string): Promise<void> => {
     setLoadingAnimation(true);
     try {
       const response = await axios.delete(
@@ -138,7 +137,7 @@ const TestContainer: React.FC = () => {
             <div style={{ marginTop: "10px" }}>
               <Button
                 variant="contained"
-                color=""
+                color="secondary"
                 style={{ marginRight: "10px" }}
                 onClick={() => {
                   resetForm();
