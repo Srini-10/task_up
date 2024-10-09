@@ -137,7 +137,7 @@ const QuestionComponent: React.FC = () => {
   };
 
   // Handle zooming with trackpad
-  const handleWheel = (e) => {
+  const handleWheel = (e: WheelEvent) => {
     e.preventDefault();
     const newScale = scale + e.deltaY * -0.001; // Adjust zoom sensitivity
     setScale(Math.min(Math.max(newScale, 0.5), 3)); // Clamp the scale between 0.5 and 3
