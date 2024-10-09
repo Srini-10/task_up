@@ -5,21 +5,16 @@ import { styled } from "@mui/material/styles";
 import Checkbox, { CheckboxProps } from "@mui/material/Checkbox";
 import Confetti from "react-confetti";
 import useWindowSize from "react-use/lib/useWindowSize";
-import CropFreeIcon from "@mui/icons-material/CropFree";
 import axios from "axios";
 import {
-  Button,
   Radio,
   RadioGroup,
   FormControl,
   FormControlLabel,
-  FormLabel,
-  TextField,
   FormGroup,
   MenuItem,
   Select,
   Box,
-  Typography,
   RadioProps,
 } from "@mui/material";
 import { showToast } from "../toastUtil.js";
@@ -81,7 +76,6 @@ const QuestionComponent: React.FC = () => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState("#000");
   const [lineWidth, setLineWidth] = useState(3);
-  const [isSizeModalOpen, setIsSizeModalOpen] = useState(false);
   const [scale, setScale] = useState(1);
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
