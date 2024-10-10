@@ -137,7 +137,7 @@ const TestContainer: React.FC = () => {
             <div style={{ marginTop: "10px" }}>
               <Button
                 variant="contained"
-                color="secondary"
+                color="primary"
                 style={{ marginRight: "10px" }}
                 onClick={() => {
                   resetForm();
@@ -152,7 +152,7 @@ const TestContainer: React.FC = () => {
                 okText="Yes"
                 cancelText="No"
               >
-                <Button variant="contained" color="primary">
+                <Button variant="contained" color="error">
                   <ion-icon name="trash-outline" />
                 </Button>
               </Popconfirm>

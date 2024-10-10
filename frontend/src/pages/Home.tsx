@@ -576,57 +576,64 @@ const Home = () => {
 
           {showDetails && (
             <>
-              <List>
-                <h1 className="poppins2 text-[20px] mb-1 text-[#083344]">
-                  Added Questions
-                </h1>
-                {questions.map((question, index) => (
-                  <>
-                    <div
-                      key={index}
-                      className="flex justify-between items-start w-[400px] border-b-[1.5px] pb-2 border-gray-100"
-                    >
-                      <h1 className="mt-3 poppins text-[14px] overflow-hidden w-[330px] text-[#000000]">
-                        {index + 1}.{question.questionText}
-                      </h1>
+              {questions.length > 0 ? (
+                <>
+                  <List>
+                    <h1 className="poppins2 text-[20px] mb-1 text-[#083344]">
+                      Added Questions
+                    </h1>
+                    {questions.map((question, index) => (
+                      <>
+                        <div
+                          key={index}
+                          className="flex justify-between items-start w-[400px] border-b-[1.5px] pb-2 border-gray-100"
+                        >
+                          <h1 className="mt-3 poppins text-[14px] overflow-hidden w-[330px] text-[#000000]">
+                            {index + 1}.{question.questionText}
+                          </h1>
 
-                      <div className="gap-0.5 flex">
-                        <IconButton
-                          edge="end"
-                          aria-label="view"
-                          onClick={() => handleViewQuestion(index)}
-                          className="w-[33px] h-[33px]"
-                        >
-                          <ion-icon name="eye" />
-                        </IconButton>
-                        <IconButton
-                          edge="end"
-                          aria-label="edit"
-                          onClick={() => handleEditQuestion(index)}
-                          className="w-[33px] h-[33px]"
-                        >
-                          <ion-icon name="create-outline" />
-                        </IconButton>
-                        <Popconfirm
-                          title="Are you sure to delete this question?"
-                          onConfirm={() => handleConfirmDelete(index)}
-                          okText="Yes"
-                          cancelText="No"
-                        >
-                          <IconButton
-                            edge="end"
-                            aria-label="delete"
-                            className="w-[33px] h-[33px]"
-                          >
-                            <ion-icon name="trash-outline" />
-                          </IconButton>
-                        </Popconfirm>
-                      </div>
-                    </div>
-                  </>
-                ))}
-              </List>
-
+                          <div className="gap-0.5 flex">
+                            <IconButton
+                              edge="end"
+                              aria-label="view"
+                              onClick={() => handleViewQuestion(index)}
+                              className="w-[33px] h-[33px]"
+                            >
+                              <ion-icon name="eye" />
+                            </IconButton>
+                            <IconButton
+                              edge="end"
+                              aria-label="edit"
+                              onClick={() => handleEditQuestion(index)}
+                              className="w-[33px] h-[33px]"
+                            >
+                              <ion-icon name="create-outline" />
+                            </IconButton>
+                            <Popconfirm
+                              title="Are you sure to delete this question?"
+                              onConfirm={() => handleConfirmDelete(index)}
+                              okText="Yes"
+                              cancelText="No"
+                            >
+                              <IconButton
+                                edge="end"
+                                aria-label="delete"
+                                className="w-[33px] h-[33px]"
+                              >
+                                <ion-icon name="trash-outline" />
+                              </IconButton>
+                            </Popconfirm>
+                          </div>
+                        </div>
+                      </>
+                    ))}
+                  </List>
+                </>
+              ) : (
+                <p className="text-gray-500 text-[15px]">
+                  No questions added yet.
+                </p>
+              )}
               {/* View Question Modal */}
               <Modal open={isViewModalOpen} closable={false} footer={null}>
                 <div>
@@ -700,7 +707,6 @@ const Home = () => {
                   )}
                 </div>
               </Modal>
-
               {editingQuestion && (
                 <Modal
                   visible={isEditModalOpen}

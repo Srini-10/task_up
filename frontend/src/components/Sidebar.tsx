@@ -1,4 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import TestLogo from "../assets/Test_Outline.svg";
@@ -22,37 +21,44 @@ const Sidebar = () => {
       name: "Test",
       logo: TestLogo,
       filledLogo: TestFilledLogo,
+      isActive:
+        location.pathname === "/" ||
+        location.pathname.startsWith("/tests/edit"),
       path: "/",
     },
     {
       name: "Dashboard",
       logo: DashboardLogo,
       filledLogo: DashboardFilledLogo,
+      isActive: location.pathname === "/dashboard",
       path: "/dashboard",
     },
     {
       name: "Assessment",
       logo: AssessmentLogo,
       filledLogo: AssessmentFilledLogo,
+      isActive: location.pathname === "/assessment",
       path: "/assessment",
     },
     {
       name: "Candidates",
       logo: AskAIFilledLogo,
       filledLogo: AskAILogo,
+      isActive: location.pathname === "/CreateCandidates",
       path: "/CreateCandidates",
     },
-    // Organizations section
     {
       name: "Employees",
       logo: CodeUpFilledLogo,
       filledLogo: CodeUpLogo,
+      isActive: location.pathname === "/Employees",
       path: "/Employees",
     },
     {
       name: "Settings",
       logo: CodeUpFilledLogo,
       filledLogo: CodeUpLogo,
+      isActive: location.pathname === "/Settings",
       path: "/Settings",
     },
   ];
@@ -69,21 +75,17 @@ const Sidebar = () => {
             key={item.path}
             onClick={() => handleClick(item.path)}
             className={`flex gap-3 items-center justify-start pl-4 rounded-tl-xl rounded-bl-xl w-[80%] h-[45px] cursor-pointer ${
-              location.pathname === item.path
-                ? "shadow-gray-500 shadow-inner bg-[#cfe1e5]"
-                : ""
+              item.isActive ? "shadow-gray-500 shadow-inner bg-[#cfe1e5]" : ""
             }`}
           >
             <img
               className="max-h-6 rounded"
-              src={
-                location.pathname === item.path ? item.filledLogo : item.logo
-              }
+              src={item.isActive ? item.filledLogo : item.logo}
               alt={item.name}
             />
             <p
               className={`font-medium text-[13px] ${
-                location.pathname === item.path ? "text-gray-900" : "text-white"
+                item.isActive ? "text-gray-900" : "text-white"
               } poppins`}
             >
               {item.name}
@@ -99,21 +101,17 @@ const Sidebar = () => {
             key={item.path}
             onClick={() => handleClick(item.path)}
             className={`flex gap-3 items-center justify-start pl-4 rounded-tl-xl rounded-bl-xl w-[80%] h-[45px] cursor-pointer ${
-              location.pathname === item.path
-                ? "shadow-gray-500 shadow-inner bg-[#cfe1e5]"
-                : ""
+              item.isActive ? "shadow-gray-500 shadow-inner bg-[#cfe1e5]" : ""
             }`}
           >
             <img
               className="max-h-6 rounded"
-              src={
-                location.pathname === item.path ? item.filledLogo : item.logo
-              }
+              src={item.isActive ? item.filledLogo : item.logo}
               alt={item.name}
             />
             <p
               className={`font-medium text-[13px] ${
-                location.pathname === item.path ? "text-gray-900" : "text-white"
+                item.isActive ? "text-gray-900" : "text-white"
               } poppins`}
             >
               {item.name}
@@ -130,21 +128,17 @@ const Sidebar = () => {
             key={item.path}
             onClick={() => handleClick(item.path)}
             className={`flex gap-3 items-center justify-start pl-4 rounded-tl-xl rounded-bl-xl w-[80%] h-[45px] cursor-pointer ${
-              location.pathname === item.path
-                ? "shadow-gray-500 shadow-inner bg-[#cfe1e5]"
-                : ""
+              item.isActive ? "shadow-gray-500 shadow-inner bg-[#cfe1e5]" : ""
             }`}
           >
             <img
               className="max-h-6 rounded"
-              src={
-                location.pathname === item.path ? item.filledLogo : item.logo
-              }
+              src={item.isActive ? item.filledLogo : item.logo}
               alt={item.name}
             />
             <p
               className={`font-medium text-[13px] ${
-                location.pathname === item.path ? "text-gray-900" : "text-white"
+                item.isActive ? "text-gray-900" : "text-white"
               }`}
             >
               {item.name}

@@ -1,43 +1,55 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import React, { useState, useEffect } from "react";
 import {
-  Container,
   TextField,
   Button,
   Checkbox,
-  FormControlLabel,
   List,
   ListItem,
-  ListItemText,
-  Modal,
-  Box,
   IconButton,
 } from "@mui/material";
 import AddQuestion from "../components/AddQuestion.tsx";
 import axios from "axios";
-import { useNavigate, useParams } from "react-router-dom";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
+import { useParams } from "react-router-dom";
+import SearchIcon from "../assets/Search_Icon.svg";
+import DefaultProfile from "../assets/User_Profile.svg";
 import { showToast } from "../toastUtil.js";
+import { DatePicker, Form, Input, Modal, Select, Popconfirm } from "antd";
+import moment from "moment";
+
+const { Option } = Select;
 
 const EditTest = () => {
-  const navigate = useNavigate();
   const { testId } = useParams();
+  const [viewQuestionIndex, setViewQuestionIndex] = useState(null);
   const [testName, setTestName] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [authOption, setAuthOption] = useState("candidateInfo");
   const [selectedCandidates, setSelectedCandidates] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [password, setPassword] = useState("");
   const [questions, setQuestions] = useState([]);
   const [candidates, setCandidates] = useState([]);
   const [showDetails, setShowDetails] = useState(true);
   const [editingCandidate, setEditingCandidate] = useState(null);
   const [editQuestionIndex, setEditQuestionIndex] = useState(null);
+  const [editingQuestion, setEditingQuestion] = useState(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editQuestionText, setEditQuestionText] = useState("");
   const [editOptions, setEditOptions] = useState([]);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [editCorrectAnswers, setEditCorrectAnswers] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectAll, setSelectAll] = useState(false);
+
+  const [questionTypes] = useState([
+    "Multiple Choice",
+    "Select",
+    "Radio",
+    "Text Input",
+  ]);
 
   useEffect(() => {
     if (questions.length > 0) {
@@ -59,6 +71,36 @@ const EditTest = () => {
     const storedPassword = sessionStorage.getItem("password");
     if (storedPassword) {
       setPassword(storedPassword);
+    }
+  }, []);
+
+  const fetchCandidates = async () => {
+    try {
+      const response = await axios.get(
+        "https://taskup-backend.vercel.app/api/testCandidates"
+      );
+      setCandidates(response.data);
+      console.log(response.data);
+      localStorage.setItem("candidates", JSON.stringify(response.data));
+    } catch (error) {
+      console.error("Error fetching candidates:", error);
+    }
+  };
+
+  useEffect(() => {
+    const storedCandidates = JSON.parse(localStorage.getItem("candidates"));
+    const storedSelectedCandidates = JSON.parse(
+      localStorage.getItem("selectedCandidates")
+    );
+
+    if (storedCandidates && storedCandidates.length > 0) {
+      setCandidates(storedCandidates);
+    } else {
+      fetchCandidates();
+    }
+
+    if (storedSelectedCandidates) {
+      setSelectedCandidates(storedSelectedCandidates);
     }
   }, []);
 
@@ -125,6 +167,24 @@ const EditTest = () => {
     fetchTestDetails();
   }, [testId]);
 
+  const handleViewQuestion = (index) => {
+    setViewQuestionIndex(index);
+    setIsViewModalOpen(true);
+  };
+
+  const handleCloseViewModal = () => {
+    setIsViewModalOpen(false);
+  };
+
+  const handleOpenModal = () => {
+    setModalVisible(true);
+  };
+
+  // Handle candidate selection modal close
+  const handleCloseModal = () => {
+    setModalVisible(false);
+  };
+
   // Save the edited candidate
   const handleSaveEditedCandidate = () => {
     const updatedCandidates = [...candidates];
@@ -188,14 +248,46 @@ const EditTest = () => {
     }
   };
 
-  // Open modal to edit question
-  const handleEditClick = (index) => {
-    const question = questions[index];
-    setEditQuestionText(question.questionText);
-    setEditOptions(question.options);
-    setEditCorrectAnswers(question.correctAnswerIndices || []);
+  const resetForm = () => {
+    setTestName("");
+    setStartDate("");
+    setEndDate("");
+    setAuthOption("candidateInfo");
+    setPassword("");
+    setQuestions([]);
+    setCandidates([]);
+    setSelectedCandidates([]);
+    setShowDetails(false);
+    localStorage.removeItem("candidates");
+    localStorage.removeItem("questions");
+    localStorage.removeItem("selectedCandidates");
+  };
+
+  const handleEditQuestion = (index) => {
     setEditQuestionIndex(index);
-    setEditModalOpen(true);
+    const questionToEdit = questions[index];
+    setEditingQuestion({ ...questionToEdit, index });
+    setIsEditModalOpen(true);
+  };
+
+  // Handle Saving the Edited Question
+  const handleSaveEditedQuestion = () => {
+    const updatedQuestions = [...questions];
+    updatedQuestions[editingQuestion.index] = { ...editingQuestion };
+    setQuestions(updatedQuestions);
+    setEditingQuestion(null);
+    setIsEditModalOpen(false);
+  };
+
+  const handleDeleteQuestion = (index) => {
+    const updatedQuestions = [...questions];
+    updatedQuestions.splice(index, 1);
+    setQuestions(updatedQuestions);
+    console.log(`Question at index ${index} deleted.`);
+  };
+
+  const handleConfirmDelete = (index) => {
+    handleDeleteQuestion(index);
   };
 
   // Load selected candidates from sessionStorage when the component mounts (optional)
@@ -258,6 +350,36 @@ const EditTest = () => {
     }
   };
 
+  const handleCorrectAnswerSelect = (selectedIndices) => {
+    // Ensure correctAnswerIndices is an array
+    setEditingQuestion((prev) => ({
+      ...prev,
+      correctAnswerIndices: Array.isArray(selectedIndices)
+        ? selectedIndices
+        : [selectedIndices],
+    }));
+  };
+
+  const handleQuestionTextChange = (text) => {
+    setEditingQuestion((prev) => ({ ...prev, questionText: text }));
+  };
+
+  const handleInputTypeChange = (newInputType) => {
+    setEditingQuestion((prev) => ({
+      ...prev,
+      inputType: newInputType,
+      correctAnswerIndices: [],
+    }));
+  };
+
+  const handleOptionChange = (index, value) => {
+    setEditingQuestion((prev) => {
+      const newOptions = [...prev.options];
+      newOptions[index] = value;
+      return { ...prev, options: newOptions };
+    });
+  };
+
   // Toggle the correct answer for multiple-choice questions
   const handleCorrectAnswerToggle = (optionIndex) => {
     const updatedCorrectAnswers = editCorrectAnswers.includes(optionIndex)
@@ -266,249 +388,586 @@ const EditTest = () => {
     setEditCorrectAnswers(updatedCorrectAnswers);
   };
 
-  // Delete question
-  const handleDeleteQuestion = (index) => {
-    const updatedQuestions = questions.filter((_, i) => i !== index);
-    setQuestions(updatedQuestions);
-  };
-
-  const BackButton = () => {
-    sessionStorage.removeItem(`test-questions-${testId}`);
-    sessionStorage.removeItem("candidates");
-    navigate(`/`);
-  };
-
   console.log(questions);
+
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedCandidates([]); // Deselect all
+    } else {
+      setSelectedCandidates(
+        filteredCandidates.map((candidate) => candidate._id)
+      ); // Select all
+    }
+    setSelectAll(!selectAll); // Toggle select all state
+  };
+
+  const filteredCandidates = candidates.filter((candidate) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      candidate.email.toLowerCase().includes(query) ||
+      candidate.phone.includes(query) ||
+      candidate.registerNumber.includes(query) ||
+      (candidate.dob && candidate.dob.includes(query))
+    );
+  });
 
   return (
     <>
-      <Button onClick={BackButton}>Back</Button>
-      <Container>
-        <h1>Edit Test</h1>
-        <TextField
-          label="Test Name"
-          value={testName}
-          onChange={(e) => setTestName(e.target.value)}
-          fullWidth
-          margin="normal"
-        />
-        <TextField
-          label="Start Date and Time"
-          type="datetime-local"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          fullWidth
-          margin="normal"
-          InputLabelProps={{
-            shrink: true,
-          }}
-        />
-        <TextField
-          label="End Date and Time"
-          type="datetime-local"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          fullWidth
-          margin="normal"
-          InputLabelProps={{
-            shrink: true,
-          }}
-        />
-
-        {/* Conditional Rendering Based on Authentication Option */}
-        {authOption === "custom" && (
-          <TextField
-            label="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            fullWidth
-            margin="normal"
-          />
-        )}
-
-        {authOption === "candidateInfo" && (
-          <>
-            <h1 variant="h6" gutterBottom style={{ marginTop: "20px" }}>
-              Select candidates
-            </h1>
-            {candidates.map((candidate) => (
-              <FormControlLabel
-                key={candidate._id}
-                control={
-                  <Checkbox
-                    checked={selectedCandidates.includes(candidate._id)}
-                    onChange={() => handleCandidateSelect(candidate._id)}
-                  />
-                }
-                label={`${candidate.email} - ${candidate.phone}`}
-              />
-            ))}
-          </>
-        )}
-
-        <AddQuestion questions={questions} setQuestions={setQuestions} />
-
-        {showDetails && (
-          <>
-            <h1 style={{ marginTop: "20px" }}>Added Questions</h1>
-            {questions && questions.length > 0 ? (
-              <List>
+      <div className="w-full py-6 px-7 flex justify-between items-start gap-5">
+        <div className="w-full h-full max-h-[calc(100vh-90px)] rounded-lg flex flex-col">
+          {showDetails && (
+            <>
+              <h1 className="poppins2 text-[23px] mb-1 text-[#083344]">
+                Added Questions
+              </h1>
+              <div className="w-full h-full bg-slate-100 rounded-lg mt-3 p-4 pt-2 overflow-y-scroll">
                 {questions.map((question, index) => (
-                  <ListItem
-                    key={index}
-                    secondaryAction={
-                      <>
-                        <IconButton
-                          edge="end"
-                          onClick={() => handleEditClick(index)}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton
-                          edge="end"
-                          color="error"
-                          onClick={() => handleDeleteQuestion(index)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </>
-                    }
-                  >
-                    <ListItemText
-                      primary={`Question ${index + 1}: ${
-                        question.questionText
-                      }`}
-                      secondary={`Input Type: ${
-                        question.inputType
-                      } | Options: ${question.options.join(
-                        ", "
-                      )} | Correct Answers: ${
-                        question.correctAnswerIndices.length > 0
-                          ? question.correctAnswerIndices
-                              .map((i) => question.options[i])
-                              .join(", ")
-                          : "N/A"
-                      }`}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            ) : (
-              <h1>No questions available yet.</h1>
-            )}
+                  <>
+                    <div
+                      key={index}
+                      className="flex justify-between items-start px-1 border-b-[1.5px] pb-3 border-cyan-900"
+                    >
+                      <h1 className="mt-4 poppins text-[14px] overflow-hidden text-[#000000]">
+                        {index + 1}.{question.questionText}
+                      </h1>
 
-            {/* Edit Modal */}
-            <Modal open={editModalOpen} onClose={() => setEditModalOpen(false)}>
-              <Box sx={modalStyle}>
-                <h1>Edit Question</h1>
-                <TextField
-                  label="Question Text"
-                  value={editQuestionText}
-                  onChange={(e) => setEditQuestionText(e.target.value)}
-                  fullWidth
-                  margin="normal"
-                />
-                <TextField
-                  label="Options (comma separated)"
-                  value={editOptions.join(", ")}
-                  onChange={(e) =>
-                    setEditOptions(
-                      e.target.value.split(",").map((opt) => opt.trim())
-                    )
-                  }
-                  fullWidth
-                  margin="normal"
-                />
-                <h1>Correct Answers:</h1>
-                {editOptions.map((option, index) => (
-                  <FormControlLabel
-                    key={index}
-                    control={
-                      <Checkbox
-                        checked={editCorrectAnswers.includes(index)}
-                        onChange={() => handleCorrectAnswerToggle(index)}
-                      />
-                    }
-                    label={option}
-                  />
+                      <div className="gap-0.5 flex">
+                        <IconButton
+                          edge="end"
+                          aria-label="view"
+                          onClick={() => handleViewQuestion(index)}
+                          className="w-[33px] h-[33px]"
+                        >
+                          <ion-icon name="eye" />
+                        </IconButton>
+                        <IconButton
+                          edge="end"
+                          aria-label="edit"
+                          onClick={() => handleEditQuestion(index)}
+                          className="w-[33px] h-[33px]"
+                        >
+                          <ion-icon name="create-outline" />
+                        </IconButton>
+                        <Popconfirm
+                          title="Are you sure to delete this question?"
+                          onConfirm={() => handleConfirmDelete(index)}
+                          okText="Yes"
+                          cancelText="No"
+                        >
+                          <IconButton
+                            edge="end"
+                            aria-label="delete"
+                            className="w-[33px] h-[33px]"
+                          >
+                            <ion-icon name="trash-outline" />
+                          </IconButton>
+                        </Popconfirm>
+                      </div>
+                    </div>
+                  </>
                 ))}
+              </div>
+
+              {/* View Question Modal */}
+              <Modal open={isViewModalOpen} closable={false} footer={null}>
+                <div>
+                  <div className="w-full flex justify-end">
+                    <button
+                      className="underline text-[15px]"
+                      onClick={handleCloseViewModal}
+                    >
+                      Close
+                    </button>
+                  </div>
+                  {viewQuestionIndex !== null && (
+                    <div className="mt-3">
+                      {/* Question Title */}
+                      <h1 className="poppins text-[16px] text-[#083344]">
+                        {viewQuestionIndex + 1}.
+                        {questions[viewQuestionIndex].questionText}
+                      </h1>
+
+                      {/* Question Type */}
+                      <h1 className="mt-3 font-semibold">Question Type:</h1>
+                      <p className="mt-1 w-full bg-[#dbe2e5] rounded-lg px-5 py-2 gap-0.5 justify-start flex flex-col">
+                        {questions[viewQuestionIndex].inputType}
+                      </p>
+
+                      {/* Display Options and Correct Answers only when the question type is not 'Text Input' */}
+                      {questions[viewQuestionIndex].inputType !==
+                      "Text Input" ? (
+                        <>
+                          {/* Options */}
+                          <h1 className="mt-3 font-semibold">Options:</h1>
+                          <ul className="mt-1 w-full bg-[#dbe2e5] rounded-lg px-5 py-2 gap-0.5 justify-start flex flex-col">
+                            {questions[viewQuestionIndex].options.map(
+                              (option, index) => (
+                                <li
+                                  className="list-disc text-[#083344]"
+                                  key={index}
+                                >
+                                  {option}
+                                </li>
+                              )
+                            )}
+                          </ul>
+
+                          {/* Correct Answer */}
+                          <h1 className="flex gap-2 mt-2 font-semibold justify-start">
+                            Correct Answer:
+                          </h1>
+                          <p className="mt-1 w-full bg-[#dbe2e5] text-[#083344] rounded-lg px-5 py-2 gap-0.5 justify-start flex flex-col">
+                            {questions[viewQuestionIndex].correctAnswerIndices
+                              .length > 0 ? (
+                              questions[
+                                viewQuestionIndex
+                              ].correctAnswerIndices.map((i) => (
+                                <li className="list-disc" key={i}>
+                                  {questions[viewQuestionIndex].options[i]}
+                                </li>
+                              ))
+                            ) : (
+                              <span>N/A</span>
+                            )}
+                          </p>
+                        </>
+                      ) : (
+                        // Display message when the question type is 'Text Input'
+                        <p className="mt-3 text-gray-600">
+                          No options available for Text Input questions.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </Modal>
+
+              {editingQuestion && (
+                <Modal
+                  visible={isEditModalOpen}
+                  closable={false}
+                  onOk={handleSaveEditedQuestion}
+                  footer={null}
+                >
+                  {editingQuestion && editQuestionIndex !== null && (
+                    <div className="mt-1">
+                      <h1 className="poppins2 text-[20px] text-[#083344]">
+                        Question no.{editQuestionIndex + 1}
+                      </h1>
+                      <Input
+                        placeholder="Question Text"
+                        value={editingQuestion.questionText}
+                        onChange={(e) =>
+                          handleQuestionTextChange(e.target.value)
+                        }
+                        style={{
+                          width: "100%",
+                          backgroundColor: "#ffffff",
+                          borderRadius: "8px",
+                          border: "1px solid #d1d5db",
+                          boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                        }}
+                        className="h-[40px] mt-2"
+                      />
+                      <Select
+                        value={editingQuestion.inputType}
+                        onChange={handleInputTypeChange}
+                        style={{
+                          width: "100%",
+                          backgroundColor: "#ffffff",
+                          borderRadius: "8px",
+                          border: "0px solid #d1d5db",
+                          boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                        }}
+                        className="h-[40px] mt-2"
+                      >
+                        {questionTypes.map((type) => (
+                          <Option key={type} value={type}>
+                            {type}
+                          </Option>
+                        ))}
+                      </Select>
+
+                      {editingQuestion.inputType !== "Text Input" ? (
+                        <div className="mt-4">
+                          <h1 className="text-[16px] poppins text-[#083344]">
+                            Options:
+                          </h1>
+                          {editingQuestion.options.map((option, index) => (
+                            <Input
+                              key={index}
+                              placeholder={`Option ${index + 1}`}
+                              style={{
+                                width: "100%",
+                                backgroundColor: "#ffffff",
+                                borderRadius: "8px",
+                                border: "1px solid #d1d5db",
+                                boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                              }}
+                              className="h-[40px] my-1"
+                              value={option}
+                              onChange={(e) =>
+                                handleOptionChange(index, e.target.value)
+                              }
+                            />
+                          ))}
+
+                          {editingQuestion.inputType === "Multiple Choice" ? (
+                            <Form.Item>
+                              <h1 className="text-[16px] mt-4 poppins text-[#083344]">
+                                Correct Answer:
+                              </h1>
+                              <Select
+                                mode="multiple"
+                                style={{
+                                  width: "100%",
+                                  backgroundColor: "#ffffff",
+                                  borderRadius: "8px",
+                                  border: "0px solid #d1d5db",
+                                  boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                                }}
+                                className="h-[40px] mt-1"
+                                value={editingQuestion.correctAnswerIndices}
+                                onChange={(selectedIndices) =>
+                                  handleCorrectAnswerSelect(selectedIndices)
+                                }
+                              >
+                                {editingQuestion.options.map(
+                                  (option, index) => (
+                                    <Option key={index} value={index}>
+                                      {`${option}` || `Option ${index + 1}`}
+                                    </Option>
+                                  )
+                                )}
+                              </Select>
+                            </Form.Item>
+                          ) : (
+                            <Form.Item>
+                              <Select
+                                value={editingQuestion.correctAnswerIndices[0]}
+                                onChange={(selectedIndex) =>
+                                  handleCorrectAnswerSelect([selectedIndex])
+                                }
+                              >
+                                {editingQuestion.options.map(
+                                  (option, index) => (
+                                    <Option key={index} value={index}>
+                                      {`Option ${index + 1}: ${option}`}
+                                    </Option>
+                                  )
+                                )}
+                              </Select>
+                            </Form.Item>
+                          )}
+                        </div>
+                      ) : (
+                        // Display message when the question type is 'Text Input'
+                        <p className="mt-3 text-gray-600">
+                          No options needed for Text Input questions.
+                        </p>
+                      )}
+
+                      <div className="w-full flex justify-end gap-3">
+                        <button
+                          className="px-4 py-2 rounded-lg text-white font-semibold bg-[#8298a2]"
+                          onClick={() => setIsEditModalOpen(false)}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          className="px-4 py-2 rounded-lg text-white font-semibold bg-[#083344]"
+                          onClick={handleSaveEditedQuestion}
+                        >
+                          Save Question
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </Modal>
+              )}
+            </>
+          )}
+        </div>
+        <div className="min-w-[450px] bg-[#a5c4ca] rounded-lg p-4">
+          <h1 className="poppins2 text-[25px] text-[#083344]">Edit Test</h1>
+          <Input
+            required
+            placeholder="Test Name"
+            value={testName}
+            onChange={(e) => setTestName(e.target.value)}
+            className="mt-5"
+            style={{
+              width: "100%",
+              backgroundColor: "#ffffff",
+              borderRadius: "8px",
+              border: "1px solid #d1d5db",
+              boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+              padding: "8px 12px",
+            }}
+          />
+          <div className="w-full justify-between flex items-center mt-1.5 gap-3">
+            <DatePicker
+              required
+              showTime={{
+                format: "HH:mm",
+              }}
+              format="YYYY-MM-DD HH:mm"
+              placeholder="Start Date and Time"
+              value={startDate ? moment(startDate) : null}
+              onChange={(date, dateString) => setStartDate(dateString)}
+              style={{
+                width: "100%",
+                backgroundColor: "#ffffff",
+                borderRadius: "8px",
+                border: "1px solid #d1d5db",
+                boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                padding: "8px 12px",
+              }}
+            />
+            <DatePicker
+              required
+              showTime={{
+                format: "HH:mm",
+              }}
+              format="YYYY-MM-DD HH:mm"
+              placeholder="End Date and Time"
+              value={endDate ? moment(endDate) : null}
+              onChange={(date, dateString) => setEndDate(dateString)}
+              style={{
+                width: "100%",
+                backgroundColor: "#ffffff",
+                borderRadius: "8px",
+                border: "1px solid #d1d5db",
+                boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                padding: "8px 12px",
+              }}
+            />
+          </div>
+
+          {/* Conditional Rendering Based on Authentication Option */}
+          {authOption === "candidateInfo" && (
+            <>
+              <div className="w-full flex justify-end">
                 <Button
                   variant="contained"
                   color="primary"
-                  onClick={handleSaveQuestion}
+                  onClick={handleOpenModal}
+                  style={{
+                    marginTop: "20px",
+                    background: "#083344",
+                    color: "#fff",
+                  }}
                 >
-                  Save Question
+                  <p
+                    className="poppins text-[15px] px-0.5 normal-case text-white"
+                    style={{
+                      textDecorationThickness: "1.5px",
+                      textUnderlineOffset: "2px",
+                    }}
+                  >
+                    Select Candidates
+                  </p>
                 </Button>
-              </Box>
-            </Modal>
-          </>
-        )}
+              </div>
 
-        {editingCandidate && (
-          <Box>
-            <h1>Edit candidate</h1>
-            <TextField
-              label="Register Number"
-              value={editingCandidate.registerNumber}
-              onChange={(e) =>
-                setEditingCandidate({
-                  ...editingCandidate,
-                  registerNumber: e.target.value,
-                })
-              }
-              fullWidth
-              margin="normal"
-            />
-            <TextField
-              label="Date of Birth"
-              value={editingCandidate.dob}
-              onChange={(e) =>
-                setEditingCandidate({
-                  ...editingCandidate,
-                  dob: e.target.value,
-                })
-              }
-              fullWidth
-              margin="normal"
-              InputLabelProps={{
-                shrink: true,
-              }}
-            />
+              {/* Modal for selecting candidates */}
+              <Modal
+                open={modalVisible}
+                onClose={handleCloseModal}
+                closable={false}
+                footer={null}
+                aria-labelledby="select-students-modal-title"
+                aria-describedby="select-students-modal-description"
+                className="flex justify-center items-center"
+              >
+                <div
+                  className="w-[50vw] h-[70vh] justify-start flex flex-col mx-auto"
+                  style={{
+                    padding: "5px",
+                    background: "#fff",
+                    borderRadius: "8px",
+                  }}
+                >
+                  <div className="">
+                    <div className="flex justify-between items-start">
+                      <h2
+                        id="select-students-modal-title"
+                        className="poppins2 text-[22px]"
+                      >
+                        Select Candidates
+                      </h2>
+                      <Button onClick={handleCloseModal}>
+                        <p
+                          className="poppins2 normal-case text-black"
+                          style={{
+                            textDecoration: "underline",
+                            textDecorationThickness: "1.5px",
+                            textUnderlineOffset: "2px",
+                          }}
+                        >
+                          Close
+                        </p>
+                      </Button>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <div className="flex justify-between mt-2 mb-3 items-center gap-1">
+                        <img className="w-7" src={SearchIcon} alt="" />
+                        <TextField
+                          className="poppins text-[16px] font-medium text-slate-300"
+                          placeholder="Search candidates"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          size="small"
+                          InputProps={{
+                            sx: {
+                              color: "gray",
+                              fontWeight: "500",
+                              border: "none",
+                              outline: "none",
+                              "& .MuiOutlinedInput-notchedOutline": {
+                                border: "none",
+                              },
+                            },
+                          }}
+                        />
+                      </div>
+                      <Button
+                        type="primary"
+                        onClick={handleSelectAll}
+                        style={{
+                          backgroundColor: "#083344",
+                          borderColor: "#083344",
+                          color: "white",
+                          marginLeft: "auto", // Align button to the right
+                        }}
+                      >
+                        <p
+                          className="poppins2 text-[12px] px-0.5 normal-case text-white"
+                          style={{
+                            textDecorationThickness: "1.5px",
+                            textUnderlineOffset: "2px",
+                          }}
+                        >
+                          {selectAll ? "Deselect All" : "Select All"}
+                        </p>
+                      </Button>
+                    </div>
+                  </div>
+
+                  <List>
+                    {filteredCandidates.map((candidate) => (
+                      <ListItem key={candidate._id} className="items-start">
+                        <div
+                          className={`w-full flex justify-start items-center -my-[6.5px] h-16 rounded-lg p-6 border-b-[1.5px] hover:bg-[#e7ebec] border-gray-200 cursor-pointer ${
+                            selectedCandidates.includes(candidate._id)
+                              ? "bg-[#d9e5e7]"
+                              : ""
+                          }`}
+                          onClick={() => handleCandidateSelect(candidate._id)} // Handle selection on click
+                        >
+                          <Checkbox
+                            checked={selectedCandidates.includes(candidate._id)}
+                            onChange={() =>
+                              handleCandidateSelect(candidate._id)
+                            }
+                            style={{ display: "none" }} // Hide the checkbox
+                          />
+                          <img
+                            src={
+                              candidate.profilePicture
+                                ? candidate.profilePicture
+                                : DefaultProfile
+                            }
+                            alt={`${candidate.registerNumber}'s profile`}
+                            className="w-10 h-10 bg-slate-400 p-2.5 rounded-lg mr-4"
+                          />
+                          <div className="flex flex-col justify-between items-start flex-grow">
+                            <text className="poppins2 text-[15px] text-black">{`${candidate.registerNumber} - ${candidate.email}`}</text>
+                            <text className="montserrat text-[14px] text-gray-500">
+                              {`${candidate.dob || "DOB not available"} - ${
+                                candidate.phone || "Phone not available"
+                              }`}
+                            </text>
+                          </div>
+                          {selectedCandidates.includes(candidate._id) && ( // Conditionally render the button
+                            <Button
+                              type="primary"
+                              shape="circle"
+                              style={{
+                                backgroundColor: "#083344",
+                                borderColor: "#083344",
+                                color: "white",
+                                marginLeft: "auto", // Align button to the right
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation(); // Prevent click from triggering the list item click
+                                handleCandidateSelect(candidate._id); // Handle check action
+                              }}
+                            >
+                              ✔
+                            </Button>
+                          )}
+                        </div>
+                      </ListItem>
+                    ))}
+                  </List>
+                </div>
+              </Modal>
+            </>
+          )}
+
+          <div className="mt-5">
+            <AddQuestion questions={questions} setQuestions={setQuestions} />
+          </div>
+
+          <div className="flex justify-between items-center gap-5">
             <Button
               variant="contained"
               color="primary"
-              onClick={handleSaveEditedCandidate}
-              fullWidth
-              style={{ marginTop: "20px" }}
+              onClick={resetForm}
+              style={{
+                width: "100%",
+                marginBottom: "20px",
+                marginTop: "20px",
+                background: "#083344",
+              }}
             >
-              Save candidate
+              <p
+                className="poppins text-[15px] px-0.5 normal-case text-white"
+                style={{
+                  textDecorationThickness: "1.5px",
+                  textUnderlineOffset: "2px",
+                }}
+              >
+                Reset Test Details
+              </p>
             </Button>
-          </Box>
-        )}
-
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleEditTest}
-          style={{ marginTop: "20px" }}
-        >
-          Update Test
-        </Button>
-      </Container>
+            <Button
+              variant="contained"
+              onClick={handleEditTest}
+              style={{
+                width: "100%",
+                marginBottom: "20px",
+                marginTop: "20px",
+                background: "#ffffff",
+              }}
+            >
+              <p
+                className="poppins text-[15px] px-0.5 normal-case text-black"
+                style={{
+                  textDecorationThickness: "1.5px",
+                  textUnderlineOffset: "2px",
+                }}
+              >
+                Update Test
+              </p>
+            </Button>
+          </div>
+        </div>
+      </div>
     </>
   );
-};
-
-const modalStyle = {
-  position: "absolute",
-  top: "50%",
-  left: "50%",
-  transform: "translate(-50%, -50%)",
-  width: 400,
-  bgcolor: "background.paper",
-  borderRadius: "8px",
-  boxShadow: 24,
-  p: 4,
 };
 
 export default EditTest;

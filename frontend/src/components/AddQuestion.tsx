@@ -1,6 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import React, { useState } from "react";
-import { Input, Button, Form, Select } from "antd";
+import { Input, Form, Select } from "antd";
+import { Button } from "@mui/material";
 
 const { Option } = Select;
 
@@ -173,9 +174,9 @@ const AddQuestion = ({ questions, setQuestions }) => {
           onClick={handleAddQuestion}
           disabled={questionText === "" || questionType === ""}
           style={{
+            width: "150px",
+            marginBottom: "10px",
             background: "#083344",
-            color: "#fff",
-            padding: "20px",
           }}
         >
           <p
