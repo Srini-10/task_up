@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import {
-  TextField,
   Button,
   Typography,
   Box,
@@ -10,7 +9,8 @@ import {
   DialogTitle,
 } from "@mui/material";
 import axios from "axios";
-import { Spin } from "antd";
+import { Input, Popconfirm, Modal, Spin } from "antd";
+import { showToast } from "../toastUtil";
 
 const CreateCandidates = () => {
   const [candidateData, setCandidateData] = useState({
@@ -21,11 +21,11 @@ const CreateCandidates = () => {
   });
   const [profilePicture, setProfilePicture] = useState(null);
   const [profilePreview, setProfilePreview] = useState(null);
-  const [message, setMessage] = useState("");
+  const [message, showToast] = useState("");
   const [candidatesList, setCandidatesList] = useState([]);
   const [editCandidateId, setEditCandidateId] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [openEditModal, setOpenEditModal] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
   // Handle input changes
   const handleInputChange = (e) => {
@@ -52,7 +52,7 @@ const CreateCandidates = () => {
     );
 
     if (isRegisterNumberExists) {
-      setMessage("Register number already exists. Please use a unique number.");
+      showToast("Register number already exists. Please use a unique number.");
       return;
     }
 
@@ -76,11 +76,11 @@ const CreateCandidates = () => {
         }
       );
 
-      setMessage("candidate registered successfully!");
+      showToast("candidate registered successfully!");
       fetchCandidates();
       resetForm();
     } catch (error) {
-      setMessage("Error registering candidate. Please try again.");
+      showToast("Error registering candidate. Please try again.");
     }
   };
 
@@ -93,7 +93,7 @@ const CreateCandidates = () => {
       );
       setCandidatesList(response.data);
     } catch (error) {
-      setMessage("Error fetching candidates.");
+      showToast("Error fetching candidates.");
     } finally {
       setLoading(false);
     }
@@ -104,10 +104,10 @@ const CreateCandidates = () => {
       await axios.delete(
         `https://taskup-backend.vercel.app/api/testCandidates/${candidateId}`
       );
-      setMessage("candidate deleted successfully!");
+      showToast("candidate deleted successfully!");
       fetchCandidates();
     } catch (error) {
-      setMessage("Error deleting candidate.");
+      showToast("Error deleting candidate.");
     }
   };
 
@@ -123,7 +123,7 @@ const CreateCandidates = () => {
       `https://taskup-backend.vercel.app/uploads/${candidate.profilePicture}`
     );
     setEditCandidateId(candidate._id);
-    setOpenEditModal(true);
+    setIsModalVisible(true);
   };
 
   const handleUpdateCandidate = async () => {
@@ -149,15 +149,15 @@ const CreateCandidates = () => {
         }
       );
 
-      setMessage("candidate updated successfully!");
+      showToast("candidate updated successfully!");
       fetchCandidates();
 
       // Reset the form and modal state
       resetForm();
-      setOpenEditModal(false);
+      setIsModalVisible(false);
     } catch (error) {
       console.error(error.response || error.message);
-      setMessage("Error updating candidate.");
+      showToast("Error updating candidate.");
     }
   };
 
@@ -180,138 +180,223 @@ const CreateCandidates = () => {
           <Spin size="large" className="custom-spin" />
         </div>
       ) : (
-        <>
-          <Typography variant="h4" align="center" gutterBottom>
-            Register candidate
-          </Typography>
-          <form onSubmit={handleSubmit}>
-            <TextField
-              label="Register Number"
-              name="registerNumber"
-              value={candidateData.registerNumber}
-              onChange={handleInputChange}
-              fullWidth
-              margin="normal"
-            />
-            <TextField
-              label="Date of Birth"
-              name="dob"
-              value={candidateData.dob}
-              onChange={handleInputChange}
-              fullWidth
-              margin="normal"
-            />
-            <TextField
-              label="Email"
-              name="email"
-              value={candidateData.email}
-              onChange={handleInputChange}
-              fullWidth
-              margin="normal"
-            />
-            <TextField
-              label="Phone"
-              name="phone"
-              value={candidateData.phone}
-              onChange={handleInputChange}
-              fullWidth
-              margin="normal"
-            />
-            <Box mt={2} mb={2}>
-              <Typography variant="body1">Upload Profile Picture:</Typography>
-              <input type="file" onChange={handleProfilePictureChange} />
+        <div className="flex justify-between items-start p-6 gap-6">
+          <div className="w-full h-full">
+            <Box>
+              <h1 className="text-[23px] poppins2 text-[#083344]">
+                Candidates List
+              </h1>
+
+              <div className="grid grid-cols-2 gap-4">
+                {candidatesList.length > 0 ? (
+                  candidatesList.map((candidate, index) => (
+                    <div className="bg-slate-100 border-[1.5px] border-slate-200 p-3 rounded-lg">
+                      <h1 className="text-[15px] text-[#083344] font-semibold flex gap-1">
+                        Register Number:
+                        <p className="font-medium text-gray-500">
+                          {candidate.registerNumber}
+                        </p>
+                      </h1>
+
+                      <h1 className="text-[15px] text-[#083344] font-semibold flex gap-1">
+                        DOB:
+                        <p className="font-medium text-gray-500">
+                          {candidate.dob}
+                        </p>
+                      </h1>
+
+                      <h1 className="text-[15px] text-[#083344] font-semibold flex gap-1">
+                        Email:
+                        <p className="font-medium text-gray-500">
+                          {candidate.email}
+                        </p>
+                      </h1>
+
+                      <h1 className="text-[15px] text-[#083344] font-semibold flex gap-1">
+                        Phone:
+                        <p className="font-medium text-gray-500">
+                          {candidate.phone}
+                        </p>
+                      </h1>
+                      {candidate.profilePicture && (
+                        <img
+                          src={`https://taskup-backend.vercel.app/uploads/${candidate.profilePicture}`}
+                          alt="Profile"
+                          width="100"
+                        />
+                      )}
+                      <Box mt={1}>
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          style={{ marginRight: "10px" }}
+                          onClick={() => handleEdit(candidate)}
+                        >
+                          <ion-icon name="create-outline" />
+                        </Button>
+                        <Popconfirm
+                          title="Are you sure to delete this question?"
+                          onClick={() => handleDelete(candidate._id)}
+                          okText="Yes"
+                          cancelText="No"
+                        >
+                          <Button variant="contained" color="error">
+                            <ion-icon name="trash-outline" />
+                          </Button>
+                        </Popconfirm>
+                      </Box>
+                    </div>
+                  ))
+                ) : (
+                  <Typography>No candidates registered yet.</Typography>
+                )}
+              </div>
             </Box>
-            {profilePreview && (
-              <Box mt={2} mb={2}>
-                <img src={profilePreview} alt="Profile Preview" width="100" />
-              </Box>
-            )}
-            <Button variant="contained" color="primary" type="submit" fullWidth>
-              Register candidate
-            </Button>
-          </form>
-          {message && (
-            <Typography mt={2} color="error">
-              {message}
-            </Typography>
-          )}
-          {/* Display stored candidate details */}
-          <Box mt={4}>
-            <Typography variant="h5">Registered candidates</Typography>
-            {candidatesList.length > 0 ? (
-              candidatesList.map((candidate, index) => (
-                <Box key={index} mb={2}>
-                  <Typography>
-                    Register Number: {candidate.registerNumber}
-                  </Typography>
-                  <Typography>DOB: {candidate.dob}</Typography>
-                  <Typography>Email: {candidate.email}</Typography>
-                  <Typography>Phone: {candidate.phone}</Typography>
-                  {candidate.profilePicture && (
-                    <img
-                      src={`https://taskup-backend.vercel.app/uploads/${candidate.profilePicture}`}
-                      alt="Profile"
-                      width="100"
-                    />
-                  )}
-                  <Box mt={2}>
-                    <Button
-                      variant="contained"
-                      color="secondary"
-                      onClick={() => handleEdit(candidate)}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="contained"
-                      color="error"
-                      onClick={() => handleDelete(candidate._id)}
-                      style={{ marginLeft: "10px" }}
-                    >
-                      Delete
-                    </Button>
-                  </Box>
-                </Box>
-              ))
-            ) : (
-              <Typography>No candidates registered yet.</Typography>
-            )}
-          </Box>
-          {/* Edit Modal */}
-          <Dialog open={openEditModal} onClose={() => setOpenEditModal(false)}>
-            <DialogTitle>Edit candidate Details</DialogTitle>
-            <DialogContent>
-              <TextField
-                label="Register Number"
+            <Modal
+              title="Edit Candidate Details"
+              visible={isModalVisible}
+              onCancel={() => setIsModalVisible(false)}
+              onOk={handleUpdateCandidate}
+              okText="Save"
+              cancelText="Cancel"
+            >
+              <Input
+                placeholder="Register Number"
                 name="registerNumber"
                 value={candidateData.registerNumber}
                 onChange={handleInputChange}
-                fullWidth
-                margin="normal"
+                style={{
+                  width: "100%",
+                  backgroundColor: "#ffffff",
+                  borderRadius: "8px",
+                  border: "1px solid #d1d5db",
+                  boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                }}
+                className="h-[40px] mt-2"
               />
-              <TextField
-                label="Date of Birth"
+              <Input
+                placeholder="Date of Birth"
                 name="dob"
                 value={candidateData.dob}
                 onChange={handleInputChange}
-                fullWidth
-                margin="normal"
+                style={{
+                  width: "100%",
+                  backgroundColor: "#ffffff",
+                  borderRadius: "8px",
+                  border: "1px solid #d1d5db",
+                  boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                }}
+                className="h-[40px] mt-2"
               />
-              <TextField
-                label="Email"
+              <Input
+                placeholder="Email"
                 name="email"
                 value={candidateData.email}
                 onChange={handleInputChange}
-                fullWidth
-                margin="normal"
+                style={{
+                  width: "100%",
+                  backgroundColor: "#ffffff",
+                  borderRadius: "8px",
+                  border: "1px solid #d1d5db",
+                  boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                }}
+                className="h-[40px] mt-2"
               />
-              <TextField
-                label="Phone"
+              <Input
+                placeholder="Phone"
                 name="phone"
                 value={candidateData.phone}
                 onChange={handleInputChange}
-                fullWidth
-                margin="normal"
+                style={{
+                  width: "100%",
+                  backgroundColor: "#ffffff",
+                  borderRadius: "8px",
+                  border: "1px solid #d1d5db",
+                  boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                }}
+                className="h-[40px] mt-2"
+              />
+
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={handleProfilePictureChange}
+                style={{ marginTop: "10px" }}
+              />
+              {profilePreview && (
+                <img
+                  src={profilePreview}
+                  alt="Preview"
+                  style={{
+                    width: "100px",
+                    height: "100px",
+                    objectFit: "cover",
+                    marginTop: "10px",
+                  }}
+                />
+              )}
+            </Modal>
+          </div>
+          <div className="min-w-[400px] max-w-[400px] bg-[#a5c4ca] rounded-lg p-4">
+            <h1 className="text-[23px] poppins2 mb-4 text-[#083344]">
+              Register candidate
+            </h1>
+            <form onSubmit={handleSubmit}>
+              <Input
+                placeholder="Register Number"
+                name="registerNumber"
+                value={candidateData.registerNumber}
+                onChange={handleInputChange}
+                style={{
+                  width: "100%",
+                  backgroundColor: "#ffffff",
+                  borderRadius: "8px",
+                  border: "1px solid #d1d5db",
+                  boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                }}
+                className="h-[40px] mt-2"
+              />
+              <Input
+                placeholder="Date of Birth"
+                name="dob"
+                value={candidateData.dob}
+                onChange={handleInputChange}
+                style={{
+                  width: "100%",
+                  backgroundColor: "#ffffff",
+                  borderRadius: "8px",
+                  border: "1px solid #d1d5db",
+                  boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                }}
+                className="h-[40px] mt-2"
+              />
+              <Input
+                placeholder="Email"
+                name="email"
+                value={candidateData.email}
+                onChange={handleInputChange}
+                style={{
+                  width: "100%",
+                  backgroundColor: "#ffffff",
+                  borderRadius: "8px",
+                  border: "1px solid #d1d5db",
+                  boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                }}
+                className="h-[40px] mt-2"
+              />
+              <Input
+                placeholder="Phone"
+                name="phone"
+                value={candidateData.phone}
+                onChange={handleInputChange}
+                style={{
+                  width: "100%",
+                  backgroundColor: "#ffffff",
+                  borderRadius: "8px",
+                  border: "1px solid #d1d5db",
+                  boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                }}
+                className="h-[40px] mt-2"
               />
               <Box mt={2} mb={2}>
                 <Typography variant="body1">Upload Profile Picture:</Typography>
@@ -322,22 +407,17 @@ const CreateCandidates = () => {
                   <img src={profilePreview} alt="Profile Preview" width="100" />
                 </Box>
               )}
-            </DialogContent>
-            {message && (
-              <Typography mt={2} color="error">
-                {message}
-              </Typography>
-            )}
-            <DialogActions>
-              <Button onClick={() => setOpenEditModal(false)} color="primary">
-                Cancel
+              <Button
+                variant="contained"
+                color="primary"
+                type="submit"
+                fullWidth
+              >
+                Register candidate
               </Button>
-              <Button onClick={handleUpdateCandidate} color="primary">
-                Save
-              </Button>
-            </DialogActions>
-          </Dialog>
-        </>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

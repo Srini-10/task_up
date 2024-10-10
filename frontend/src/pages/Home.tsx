@@ -892,7 +892,7 @@ const Home = () => {
                 <CircularProgress
                   size={24}
                   style={{ color: "#fff", marginRight: "10px" }}
-                /> // Loading spinner
+                />
               ) : null}
               <p
                 className="poppins text-[15px] px-0.5 normal-case text-white"
