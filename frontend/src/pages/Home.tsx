@@ -202,10 +202,8 @@ const Home = () => {
       let updatedSelected;
 
       if (prevSelected.includes(candidateId)) {
-        // If already selected, remove it
         updatedSelected = prevSelected.filter((id) => id !== candidateId);
       } else {
-        // Otherwise, add it
         updatedSelected = [...prevSelected, candidateId];
       }
 
@@ -221,13 +219,13 @@ const Home = () => {
 
   const handleSelectAll = () => {
     if (selectAll) {
-      setSelectedCandidates([]); // Deselect all
+      setSelectedCandidates([]);
     } else {
       setSelectedCandidates(
         filteredCandidates.map((candidate) => candidate._id)
       ); // Select all
     }
-    setSelectAll(!selectAll); // Toggle select all state
+    setSelectAll(!selectAll);
   };
 
   const handleCorrectAnswerSelect = (selectedIndices) => {
@@ -319,13 +317,13 @@ const Home = () => {
       candidate.email.toLowerCase().includes(query) ||
       candidate.phone.includes(query) ||
       candidate.registerNumber.includes(query) ||
-      (candidate.dob && candidate.dob.includes(query)) // Ensure dob is not null
+      (candidate.dob && candidate.dob.includes(query))
     );
   });
 
   return (
     <>
-      <div className="flex justify-between gap-6">
+      <div className="flex justify-between">
         <div className="w-full p-6 h-[calc(100vh-50px)] overflow-y-scroll scroll-smooth">
           <TestContainer />
         </div>

@@ -60,3 +60,7 @@ code {
 .material-symbols-visibility-outlined {
   font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 18;
 }
+
+.custom-spin .ant-spin-dot i {
+  background-color: #083344;
+}

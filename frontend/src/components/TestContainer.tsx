@@ -1,4 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -26,7 +25,7 @@ const TestContainer: React.FC = () => {
       try {
         const response = await axios.get(
           "https://taskup-backend.vercel.app/api/tests/recent"
-        ); // Your server URL and port
+        );
         setTests(response.data);
         setLoading(false);
       } catch (error) {
@@ -90,94 +89,99 @@ const TestContainer: React.FC = () => {
     sessionStorage.removeItem("questions");
   };
 
-  if (loading) {
-    return <div>Loading tests...</div>;
-  }
-
   return (
     <div className="h-full overflow-y-scroll">
       {loadingAnimation ? (
         <div className="absolute z-50 backdrop-blur-[2px] top-0 left-0 w-full h-full flex justify-center items-center">
-          <Spin size="large" />
+          <Spin size="large" className="custom-spin" />
         </div>
       ) : null}
 
-      <h1 className="text-[20px] font-semibold">Recently Added Tests</h1>
-      {tests.map((test, index) => (
-        <div
-          key={test._id}
-          style={{ padding: "20px" }}
-          className="bg-slate-50 border-[1.5px] border-slate-200 mt-2 rounded-lg"
-        >
-          <div className="w-full flex justify-between items-start">
-            <h3 className="text-black font-semibold text-[16px]">
-              {index + 1}. {test.testName}
-            </h3>
-            <div
-              onClick={() => handleCopyToClipboard(test._id)}
-              className="-mt-3.5 -mr-3.5 hover:bg-gray-200 w-6 h-6 pl-[4px] pt-[2px] rounded cursor-pointer"
-            >
-              <ion-icon name="copy-outline"></ion-icon>
-            </div>
-          </div>
-
-          {/* Test sharing link */}
-          <div className="flex justify-between -mt-4 items-end">
-            <p className="text-[13px] flex flex-col">
-              <a
-                href={`http://localhost:3000/tests/${test._id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[13px] text-slate-600"
-              >
-                https://taskup-brix.vercel.app/tests/{test._id}
-              </a>
-            </p>
-            {/* Buttons for editing and deleting the test */}
-            <div style={{ marginTop: "10px" }}>
-              <Button
-                variant="contained"
-                color="primary"
-                style={{ marginRight: "10px" }}
-                onClick={() => {
-                  resetForm();
-                  navigate(`/tests/edit/${test._id}`);
-                }}
-              >
-                <ion-icon name="create-outline" />
-              </Button>
-              <Popconfirm
-                title="Are you sure to delete this question?"
-                onConfirm={() => handleConfirmDelete(test._id)}
-                okText="Yes"
-                cancelText="No"
-              >
-                <Button variant="contained" color="error">
-                  <ion-icon name="trash-outline" />
-                </Button>
-              </Popconfirm>
-            </div>
-          </div>
-
-          {/* Test status showToast */}
-          <Alert
-            className="h-10 flex items-center justify-start mt-2"
-            severity={
-              getTestStatus(test.startDate, test.endDate) === "upcoming"
-                ? "info"
-                : getTestStatus(test.startDate, test.endDate) === "ongoing"
-                ? "warning"
-                : "error"
-            }
-          >
-            {getTestStatus(test.startDate, test.endDate) === "upcoming" &&
-              "Upcoming"}
-            {getTestStatus(test.startDate, test.endDate) === "ongoing" &&
-              "Ongoing"}
-            {getTestStatus(test.startDate, test.endDate) === "ended" && "Ended"}
-          </Alert>
+      {loading ? (
+        <div className="z-50 w-full h-full flex justify-center items-center">
+          <Spin size="large" className="custom-spin" />
         </div>
-      ))}
+      ) : (
+        <>
+          <h1 className="text-[20px] font-semibold">Recently Added Tests</h1>
+          {tests.map((test, index) => (
+            <div
+              key={test._id}
+              style={{ padding: "20px" }}
+              className="bg-slate-50 border-[1.5px] border-slate-200 mt-2 rounded-lg"
+            >
+              <div className="w-full flex justify-between items-start">
+                <h3 className="text-black font-semibold text-[16px]">
+                  {index + 1}. {test.testName}
+                </h3>
+                <div
+                  onClick={() => handleCopyToClipboard(test._id)}
+                  className="-mt-3.5 -mr-3.5 hover:bg-gray-200 w-6 h-6 pl-[4px] pt-[2px] rounded cursor-pointer"
+                >
+                  <ion-icon name="copy-outline"></ion-icon>
+                </div>
+              </div>
+
+              {/* Test sharing link */}
+              <div className="flex justify-between -mt-4 items-end">
+                <p className="text-[13px] flex flex-col">
+                  <a
+                    href={`http://localhost:3000/tests/${test._id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[13px] text-slate-600"
+                  >
+                    https://taskup-brix.vercel.app/tests/{test._id}
+                  </a>
+                </p>
+                {/* Buttons for editing and deleting the test */}
+                <div style={{ marginTop: "10px" }}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    style={{ marginRight: "10px" }}
+                    onClick={() => {
+                      resetForm();
+                      navigate(`/tests/edit/${test._id}`);
+                    }}
+                  >
+                    <ion-icon name="create-outline" />
+                  </Button>
+                  <Popconfirm
+                    title="Are you sure to delete this question?"
+                    onConfirm={() => handleConfirmDelete(test._id)}
+                    okText="Yes"
+                    cancelText="No"
+                  >
+                    <Button variant="contained" color="error">
+                      <ion-icon name="trash-outline" />
+                    </Button>
+                  </Popconfirm>
+                </div>
+              </div>
+
+              {/* Test status showToast */}
+              <Alert
+                className="h-10 flex items-center justify-start mt-2"
+                severity={
+                  getTestStatus(test.startDate, test.endDate) === "upcoming"
+                    ? "info"
+                    : getTestStatus(test.startDate, test.endDate) === "ongoing"
+                    ? "warning"
+                    : "error"
+                }
+              >
+                {getTestStatus(test.startDate, test.endDate) === "upcoming" &&
+                  "Upcoming"}
+                {getTestStatus(test.startDate, test.endDate) === "ongoing" &&
+                  "Ongoing"}
+                {getTestStatus(test.startDate, test.endDate) === "ended" &&
+                  "Ended"}
+              </Alert>
+            </div>
+          ))}
+        </>
+      )}
     </div>
   );
 };

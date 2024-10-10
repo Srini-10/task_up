@@ -1,4 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import React, { useState } from "react";
 import { Input, Form, Select } from "antd";
 import { Button } from "@mui/material";

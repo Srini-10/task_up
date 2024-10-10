@@ -1,4 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import React, { useState, useEffect } from "react";
 import {
   TextField,
@@ -33,12 +32,8 @@ const EditTest = () => {
   const [questions, setQuestions] = useState([]);
   const [candidates, setCandidates] = useState([]);
   const [showDetails, setShowDetails] = useState(true);
-  const [editingCandidate, setEditingCandidate] = useState(null);
   const [editQuestionIndex, setEditQuestionIndex] = useState(null);
   const [editingQuestion, setEditingQuestion] = useState(null);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [editQuestionText, setEditQuestionText] = useState("");
-  const [editOptions, setEditOptions] = useState([]);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [editCorrectAnswers, setEditCorrectAnswers] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -185,17 +180,6 @@ const EditTest = () => {
     setModalVisible(false);
   };
 
-  // Save the edited candidate
-  const handleSaveEditedCandidate = () => {
-    const updatedCandidates = [...candidates];
-    updatedCandidates[editingCandidate.index] = {
-      registerNumber: editingCandidate.registerNumber,
-      dob: editingCandidate.dob,
-    };
-    setCandidates(updatedCandidates);
-    setEditingCandidate(null); // Clear editing state
-  };
-
   // Save candidates to local storage whenever candidates state is updated
   useEffect(() => {
     if (candidates.length > 0) {
@@ -209,8 +193,8 @@ const EditTest = () => {
       .map((candidate) => ({
         registerNumber: candidate.registerNumber,
         dob: candidate.dob,
-        phone: candidate.phone, // Include phone
-        email: candidate.email, // Include email
+        phone: candidate.phone,
+        email: candidate.email,
       }));
 
     const updatedTestData = {
@@ -319,35 +303,6 @@ const EditTest = () => {
 
       return updatedSelected;
     });
-  };
-
-  // Save edited question and update in the database
-  const handleSaveQuestion = async () => {
-    const updatedQuestion = {
-      questionText: editQuestionText,
-      options: editOptions,
-      correctAnswerIndices: editCorrectAnswers,
-      inputType: "multiple-choice",
-    };
-
-    try {
-      await axios.put(
-        `https://taskup-backend.vercel.app/api/tests/${testId}/questions/${questions[editQuestionIndex]._id}`,
-        updatedQuestion
-      );
-
-      const updatedQuestions = [...questions];
-      updatedQuestions[editQuestionIndex] = {
-        ...updatedQuestion,
-        _id: questions[editQuestionIndex]._id, // Ensure the ID remains unchanged
-      };
-      setQuestions(updatedQuestions);
-      showToast("Question updated successfully!");
-      setEditModalOpen(false);
-    } catch (error) {
-      console.error("Error updating question:", error);
-      showToast("An error occurred while updating the question.");
-    }
   };
 
   const handleCorrectAnswerSelect = (selectedIndices) => {

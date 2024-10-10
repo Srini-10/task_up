@@ -1,4 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
@@ -85,7 +84,7 @@ const QuestionComponent: React.FC = () => {
   useEffect(() => {
     const storedBookmarkState = sessionStorage.getItem("isBookmarked");
     if (storedBookmarkState !== null) {
-      setIsBookmarked(JSON.parse(storedBookmarkState)); // Convert string to boolean
+      setIsBookmarked(JSON.parse(storedBookmarkState));
     }
   }, []);
 
@@ -93,7 +92,7 @@ const QuestionComponent: React.FC = () => {
   const handleBookmarkClick = () => {
     setIsBookmarked((prev) => {
       const newBookmarkState = !prev;
-      sessionStorage.setItem("isBookmarked", JSON.stringify(newBookmarkState)); // Store new state in sessionStorage
+      sessionStorage.setItem("isBookmarked", JSON.stringify(newBookmarkState));
       return newBookmarkState;
     });
   };
@@ -132,15 +131,15 @@ const QuestionComponent: React.FC = () => {
     const ctx = ctxRef.current;
 
     if (ctx) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
   };
 
-  // Handle zooming with trackpad
+  // Handle zooming with track pad
   const handleWheel = (e: WheelEvent) => {
     e.preventDefault();
-    const newScale = scale + e.deltaY * -0.001; // Adjust zoom sensitivity
-    setScale(Math.min(Math.max(newScale, 0.5), 3)); // Clamp the scale between 0.5 and 3
+    const newScale = scale + e.deltaY * -0.001;
+    setScale(Math.min(Math.max(newScale, 0.5), 3));
     redrawCanvas(newScale);
   };
 
@@ -148,11 +147,11 @@ const QuestionComponent: React.FC = () => {
   const redrawCanvas = (newScale) => {
     const canvas = canvasRef.current;
     const ctx = ctxRef.current;
-    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height); // Get current image data
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
-    ctx.setTransform(newScale, 0, 0, newScale, offsetX, offsetY); // Apply new scale and offsets
-    ctx.putImageData(imgData, 0, 0); // Draw the image data back onto the canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(newScale, 0, 0, newScale, offsetX, offsetY);
+    ctx.putImageData(imgData, 0, 0);
   };
 
   // Set up event listener for the canvas
@@ -210,8 +209,8 @@ const QuestionComponent: React.FC = () => {
   // Function to calculate time difference
   const calculateTimeDifference = (targetTime: Date) => {
     const now = new Date().getTime();
-    const difference = targetTime.getTime() - now; // Difference in milliseconds
-    return Math.max(difference, 0); // Ensure non-negative time difference
+    const difference = targetTime.getTime() - now;
+    return Math.max(difference, 0);
   };
 
   useEffect(() => {
@@ -265,7 +264,7 @@ const QuestionComponent: React.FC = () => {
   }, [testStatus, endTime]);
 
   // Tab visibility change listener
-  const handleVisibilityChange = () => {
+  const handleVisibilityChange = useCallback(() => {
     if (document.visibilityState === "hidden") {
       setTabSwitchCount((prevCount) => {
         const newCount = prevCount + 1;
@@ -285,7 +284,7 @@ const QuestionComponent: React.FC = () => {
         return newCount;
       });
     }
-  };
+  }, [setTabSwitchCount, setMalpractice, showToast]);
 
   useEffect(() => {
     if (isAuthenticated && !isTestSubmitted) {
@@ -303,9 +302,9 @@ const QuestionComponent: React.FC = () => {
   // Effect to check tab switch count and auto-submit test if needed
   useEffect(() => {
     if (tabSwitchCount > 3 && !isTestSubmitted) {
-      setMalpractice(true); // Set malpractice flag to true
+      setMalpractice(true);
       console.log("Auto-submitting due to excessive tab switches");
-      handleSubmit(null, true); // Automatically submit the test with malpractice flag
+      handleSubmit(null, true);
     }
   }, [tabSwitchCount, handleSubmit, isTestSubmitted, setMalpractice]);
 
@@ -313,7 +312,7 @@ const QuestionComponent: React.FC = () => {
   useEffect(() => {
     if (remainingTime !== null && remainingTime <= 0 && !isTestSubmitted) {
       console.log("Auto-submitting due to time expiration");
-      handleSubmit(null, true); // Automatically submit the test
+      handleSubmit(null, true);
     }
   }, [remainingTime, handleSubmit, isTestSubmitted]);
 
@@ -425,11 +424,6 @@ const QuestionComponent: React.FC = () => {
           "totalQuestions",
           response.data.totalQuestions.toString()
         );
-
-        // Optionally, inform the user about their previous submission
-        // showToast(
-        //   `You have already submitted the test. Your score: ${response.data.score}`
-        // );
       } else {
         console.log("Test not submitted yet.");
 
@@ -450,7 +444,7 @@ const QuestionComponent: React.FC = () => {
         const response = await axios.get(
           `https://taskup-backend.vercel.app/api/tests/${testId}`
         );
-        setTestName(response.data.testName); // Adjust according to your API structure
+        setTestName(response.data.testName);
       } catch (error) {
         console.error("Error fetching test name:", error);
       } finally {
@@ -472,14 +466,12 @@ const QuestionComponent: React.FC = () => {
 
       // If score and totalQuestions are stored in session storage, set them
       if (storedScore && storedTotalQuestions) {
-        setScore(parseInt(storedScore)); // Ensure that storedScore is parsed as an integer
-        setTotalQuestions(parseInt(storedTotalQuestions)); // Ensure storedTotalQuestions is an integer
+        setScore(parseInt(storedScore));
+        setTotalQuestions(parseInt(storedTotalQuestions));
       } else {
-        // If there's no score or totalQuestions, fetch the questions again
         fetchQuestions();
       }
     } else {
-      // If the test was not submitted, fetch questions normally
       fetchQuestions();
     }
   };
@@ -503,8 +495,8 @@ const QuestionComponent: React.FC = () => {
           "authData",
           JSON.stringify({
             testId,
-            registerNumber: response.data.registerNumber, // Store the fetched registerNumber
-            email: response.data.email, // Store the fetched email
+            registerNumber: response.data.registerNumber,
+            email: response.data.email,
           })
         );
 
@@ -722,8 +714,8 @@ const QuestionComponent: React.FC = () => {
   // Handle keydown events
   const handleKeyDown = (event) => {
     if (event.key === "Escape") {
-      event.preventDefault(); // Prevent default escape action
-      event.stopPropagation(); // Stop the event from bubbling up
+      event.preventDefault();
+      event.stopPropagation();
       console.log("Escape key pressed but disabled.");
     }
     if (event.key === "ArrowLeft") {
@@ -798,7 +790,6 @@ const QuestionComponent: React.FC = () => {
 
   // Effect to handle full-screen state on page load
   useEffect(() => {
-    // Request full-screen mode if set to true
     if (fullScreenMode) {
       document.documentElement.requestFullscreen().catch((err) => {
         console.error(
@@ -1624,7 +1615,6 @@ const QuestionComponent: React.FC = () => {
                             <button
                               onClick={clearCanvas}
                               className="text-[15px] font-medium bg-slate-100 py-2 px-3 rounded-md"
-                              // onClick={Clear}
                             >
                               Clear
                             </button>
@@ -1666,20 +1656,20 @@ const QuestionComponent: React.FC = () => {
                               borderRadius: "5px",
                               border: "1.5px solid",
                               borderColor: selectedIndexes.includes(index)
-                                ? "#083344" // Blue border for the active/attending question
+                                ? "#083344"
                                 : selectedAnswers[question._id]
                                 ? "#e2e8f0"
-                                : "#e2e8f0", // Green if answer is selected, otherwise white
+                                : "#e2e8f0",
                               backgroundColor: selectedIndexes.includes(index)
-                                ? "#0e7490" // Blue background for the active/attending question
+                                ? "#0e7490"
                                 : selectedAnswers[question._id]
                                 ? "#b2d5dc"
-                                : "white", // Green if answer is selected, otherwise white
+                                : "white",
                               color: selectedIndexes.includes(index)
                                 ? "white"
                                 : selectedAnswers[question._id]
-                                ? "#083344" // White text for active or selected questions
-                                : "black", // Black text for inactive/unanswered questions
+                                ? "#083344"
+                                : "black",
                               cursor: "pointer",
                               marginBottom: "10px",
                               textAlign: "center",
@@ -1714,10 +1704,10 @@ const QuestionComponent: React.FC = () => {
                       <div
                         style={{
                           width: `${percentage}%`,
-                          backgroundColor: "#0e7490", // Change this color for the filled portion
+                          backgroundColor: "#0e7490",
                           height: "100%",
                           borderRadius: "8px",
-                          transition: "width 0.5s ease-in-out", // Smooth animation
+                          transition: "width 0.5s ease-in-out",
                         }}
                       />
                     </div>

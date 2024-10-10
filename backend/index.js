@@ -331,6 +331,7 @@ app.get("/api/tests/:testId/ranking", async (req, res) => {
     // Map over all submissions and include all details for the rankings
     const rankings = submissions.map((submission) => ({
       registerNumber: submission.registerNumber,
+      email: submission.email,
       marks: submission.score,
       submissionTime: submission.submittedAt,
       answers: submission.answers.map((answer) => ({
