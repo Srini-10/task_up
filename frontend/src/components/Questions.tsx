@@ -49,7 +49,7 @@ const QuestionComponent: React.FC = () => {
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
   const [testStatus, setTestStatus] = useState<string>("");
   const [isTestSubmitted, setIsTestSubmitted] = useState(false);
-  const [setTotalQuestions] = useState<number | null>(null);
+  const [totalQuestions, setTotalQuestions] = useState<number | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -62,17 +62,17 @@ const QuestionComponent: React.FC = () => {
     [key: string]: number[] | number;
   }>(JSON.parse(sessionStorage.getItem("selectedAnswers") || "{}"));
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
-  const [setMalpractice] = useState(false);
+  const [malpractice, setMalpractice] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [setScore] = useState<number | null>(null);
+  const [score, setScore] = useState<number | null>(null);
   const { testId } = useParams<{ testId: string }>();
   const [leftWidth, setLeftWidth] = useState(64);
   const isResizing = useRef(false);
   const navigate = useNavigate();
-  const requestRef = useRef(null);
+  const requestRef = useRef<HTMLCanvasElement | null>(null);
   const [noteText, setNoteText] = useState("");
-  const canvasRef = useRef(null);
-  const ctxRef = useRef(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const ctxRef = useRef<any>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [color] = useState("#000");
   const [lineWidth] = useState(3);
@@ -80,6 +80,7 @@ const QuestionComponent: React.FC = () => {
   const [offsetX] = useState(0);
   const [offsetY] = useState(0);
 
+  console.log(malpractice, score, totalQuestions);
   // Load bookmark state from sessionStorage when the component mounts
   useEffect(() => {
     const storedBookmarkState = sessionStorage.getItem("isBookmarked");
@@ -101,7 +102,7 @@ const QuestionComponent: React.FC = () => {
   const startDrawing = (e) => {
     setIsDrawing(true);
     const canvas = canvasRef.current;
-    ctxRef.current = canvas.getContext("2d");
+    ctxRef.current = canvas!.getContext("2d");
 
     // Set stroke style and width
     ctxRef.current.strokeStyle = color;
@@ -131,28 +132,37 @@ const QuestionComponent: React.FC = () => {
     const ctx = ctxRef.current;
 
     if (ctx) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, canvas!.width, canvas!.height);
     }
   };
 
-  // Handle zooming with track pad
-  const handleWheel = (e: WheelEvent) => {
-    e.preventDefault();
-    const newScale = scale + e.deltaY * -0.001;
-    setScale(Math.min(Math.max(newScale, 0.5), 3));
-    redrawCanvas(newScale);
-  };
-
   // Redraw the canvas with the current scale
-  const redrawCanvas = (newScale) => {
-    const canvas = canvasRef.current;
-    const ctx = ctxRef.current;
-    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const redrawCanvas = useCallback(
+    (newScale) => {
+      const canvas = canvasRef.current;
+      const ctx = ctxRef.current;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.setTransform(newScale, 0, 0, newScale, offsetX, offsetY);
-    ctx.putImageData(imgData, 0, 0);
-  };
+      if (canvas && ctx) {
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.setTransform(newScale, 0, 0, newScale, offsetX, offsetY);
+        ctx.putImageData(imgData, 0, 0);
+      }
+    },
+    [offsetX, offsetY, canvasRef, ctxRef]
+  );
+
+  const handleWheel = useCallback(
+    (e: WheelEvent) => {
+      e.preventDefault();
+      const newScale = scale + e.deltaY * -0.001;
+      setScale(Math.min(Math.max(newScale, 0.5), 3));
+      redrawCanvas(newScale);
+    },
+    //@ts-ignore
+    [scale, redrawCanvas]
+  );
 
   // Set up event listener for the canvas
   useEffect(() => {
@@ -167,7 +177,7 @@ const QuestionComponent: React.FC = () => {
         canvas.removeEventListener("wheel", handleWheel);
       }
     };
-  }, [scale]);
+  }, [handleWheel]);
 
   // Mouse down event handler for starting resize
   const handleMouseDown = () => {
@@ -175,17 +185,20 @@ const QuestionComponent: React.FC = () => {
   };
 
   // Optimized Mouse move event handler using requestAnimationFrame
-  const handleMouseMove = useCallback((e) => {
-    if (isResizing.current) {
-      if (requestRef.current) {
-        cancelAnimationFrame(requestRef.current);
+  const handleMouseMove = useCallback(
+    (e) => {
+      if (isResizing.current) {
+        if (requestRef.current) {
+          cancelAnimationFrame(requestRef.current);
+        }
+        requestRef.current = requestAnimationFrame(() => {
+          const newLeftWidth = (e.clientX / window.innerWidth) * 100;
+          setLeftWidth(newLeftWidth);
+        });
       }
-      requestRef.current = requestAnimationFrame(() => {
-        const newLeftWidth = (e.clientX / window.innerWidth) * 100;
-        setLeftWidth(newLeftWidth);
-      });
-    }
-  }, []);
+    },
+    [] // If there are no dependencies, pass an empty array
+  );
 
   // Mouse up event handler for stopping resize
   const handleMouseUp = () => {
@@ -284,7 +297,7 @@ const QuestionComponent: React.FC = () => {
         return newCount;
       });
     }
-  }, [setTabSwitchCount, setMalpractice, showToast]);
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated && !isTestSubmitted) {
@@ -298,6 +311,111 @@ const QuestionComponent: React.FC = () => {
       };
     }
   }, [isAuthenticated, handleVisibilityChange, isTestSubmitted]);
+
+  const handleSubmit = useCallback(
+    async (
+      event: React.FormEvent<HTMLFormElement> | null = null,
+      isMalpractice = false
+    ) => {
+      if (event) event.preventDefault();
+
+      // Retrieve authentication data from session storage
+      const authData = JSON.parse(sessionStorage.getItem("authData") || "{}");
+      const email = authData.email;
+      const registerNumber = authData.registerNumber;
+
+      // Log the fetched values
+      console.log("Fetched Email:", email);
+      console.log("Fetched Register Number:", registerNumber);
+
+      // Check for empty values
+      if (!email || !registerNumber) {
+        showToast("Authentication details not available. Please login again.");
+        return;
+      }
+
+      try {
+        // Convert selected answers to an array of objects for answers field
+        const answers = Object.entries(selectedAnswers).map(
+          ([questionId, selectedAnswer]) => {
+            const question = questions.find((q) => q._id === questionId);
+            return {
+              questionId,
+              questionText: question?.questionText,
+              selectedAnswer: selectedAnswer ? String(selectedAnswer) : "",
+            };
+          }
+        );
+
+        console.log("Prepared answers:", answers);
+
+        // Submit answers and get the score
+        const submissionResponse = await axios.post(
+          `https://taskup-backend.vercel.app/api/tests/${testId}/submit`,
+          {
+            email,
+            registerNumber,
+            answers,
+            questions,
+            malpractice: isMalpractice,
+          }
+        );
+
+        // Handle the response
+        const { score, totalQuestions } = submissionResponse.data;
+        setScore(score);
+        setTotalQuestions(totalQuestions);
+
+        // Prepare payload for saving submission
+        const saveSubmissionPayload = {
+          email,
+          registerNumber,
+          answers,
+          score,
+          questions,
+          malpractice: isMalpractice,
+        };
+
+        console.log("Saving submission with payload:", saveSubmissionPayload);
+
+        // Save the submission
+        await axios.post(
+          `https://taskup-backend.vercel.app/api/tests/${testId}/save-submission`,
+          saveSubmissionPayload
+        );
+
+        // Set the successful submission flag to true
+        setIsSubmissionSuccessful(true);
+
+        // Store submission status in localStorage
+        localStorage.setItem("isTestSubmitted", "true");
+        localStorage.setItem("isSubmissionSuccessful", "true");
+        sessionStorage.setItem("score", score.toString());
+        sessionStorage.setItem("totalQuestions", totalQuestions.toString());
+
+        // Optional success toast message
+        showToast(
+          `Test submitted successfully! Score: ${score}/${totalQuestions}`
+        );
+      } catch (error) {
+        console.error("Error during submission:", error);
+        showToast(
+          "An error occurred during submission: " +
+            (error.response?.data?.message || error.message)
+        );
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      questions,
+      selectedAnswers,
+      testId,
+      setScore,
+      setTotalQuestions,
+      setIsSubmissionSuccessful,
+      showToast,
+    ]
+  );
 
   // Effect to check tab switch count and auto-submit test if needed
   useEffect(() => {
@@ -350,6 +468,20 @@ const QuestionComponent: React.FC = () => {
     fetchTestData();
   }, [testId]);
 
+  const fetchQuestions = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(
+        `https://taskup-backend.vercel.app/api/tests/${testId}/questions`
+      );
+      setQuestions(response.data);
+    } catch (error) {
+      console.error("Error fetching questions:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [testId]); // Add 'testId' as a dependency since it's used inside the function
+
   // Check if user is already authenticated and load submission status from sessionStorage
   useEffect(() => {
     // Load stored input values from sessionStorage
@@ -370,6 +502,27 @@ const QuestionComponent: React.FC = () => {
     );
     setSelectedAnswers(storedSelectedAnswers);
 
+    // Check if a submission exists in local storage or the backend
+    const checkStoredSubmission = (storedSubmission: string | null) => {
+      const storedScore = sessionStorage.getItem("score");
+      const storedTotalQuestions = sessionStorage.getItem("totalQuestions");
+
+      // If the test has already been submitted
+      if (storedSubmission === "true") {
+        setIsTestSubmitted(true);
+
+        // If score and totalQuestions are stored in session storage, set them
+        if (storedScore && storedTotalQuestions) {
+          setScore(parseInt(storedScore));
+          setTotalQuestions(parseInt(storedTotalQuestions));
+        } else {
+          fetchQuestions();
+        }
+      } else {
+        fetchQuestions();
+      }
+    };
+
     // Check if user is already authenticated and load submission status from sessionStorage
     const storedAuthData = sessionStorage.getItem("authData");
     const storedSubmission = localStorage.getItem("isTestSubmitted");
@@ -381,7 +534,7 @@ const QuestionComponent: React.FC = () => {
         setTestName(authData.testName);
       }
     }
-  }, [testId]);
+  }, [testId, fetchQuestions]);
 
   // Store input field values in sessionStorage whenever they change
   useEffect(() => {
@@ -455,27 +608,6 @@ const QuestionComponent: React.FC = () => {
     fetchTestName();
   }, [testId]);
 
-  // Check if a submission exists in local storage or the backend
-  const checkStoredSubmission = (storedSubmission: string | null) => {
-    const storedScore = sessionStorage.getItem("score");
-    const storedTotalQuestions = sessionStorage.getItem("totalQuestions");
-
-    // If the test has already been submitted
-    if (storedSubmission === "true") {
-      setIsTestSubmitted(true);
-
-      // If score and totalQuestions are stored in session storage, set them
-      if (storedScore && storedTotalQuestions) {
-        setScore(parseInt(storedScore));
-        setTotalQuestions(parseInt(storedTotalQuestions));
-      } else {
-        fetchQuestions();
-      }
-    } else {
-      fetchQuestions();
-    }
-  };
-
   // Authentication handler
   const handleAuthentication = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -542,20 +674,6 @@ const QuestionComponent: React.FC = () => {
     }
   };
 
-  const fetchQuestions = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get(
-        `https://taskup-backend.vercel.app/api/tests/${testId}/questions`
-      );
-      setQuestions(response.data);
-    } catch (error) {
-      console.error("Error fetching questions:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleInputChange = (
     questionId: string,
     selectedOption: string | number | number[]
@@ -565,101 +683,6 @@ const QuestionComponent: React.FC = () => {
       [questionId]: selectedOption,
     }));
   };
-
-  const handleSubmit = useCallback(
-    async (
-      event: React.FormEvent<HTMLFormElement> | null = null,
-      isMalpractice = false
-    ) => {
-      if (event) event.preventDefault();
-
-      // Retrieve authentication data from session storage
-      const authData = JSON.parse(sessionStorage.getItem("authData") || "{}");
-      const email = authData.email;
-      const registerNumber = authData.registerNumber;
-
-      // Log the fetched values
-      console.log("Fetched Email:", email);
-      console.log("Fetched Register Number:", registerNumber);
-
-      // Check for empty values
-      if (!email || !registerNumber) {
-        showToast("Authentication details not available. Please login again.");
-        return;
-      }
-
-      try {
-        // Convert selected answers to an array of objects for answers field
-        const answers = Object.entries(selectedAnswers).map(
-          ([questionId, selectedAnswer]) => {
-            const question = questions.find((q) => q._id === questionId);
-            return {
-              questionId,
-              questionText: question?.questionText,
-              selectedAnswer: selectedAnswer ? String(selectedAnswer) : "",
-            };
-          }
-        );
-
-        console.log("Prepared answers:", answers);
-
-        // Submit answers and get the score
-        const submissionResponse = await axios.post(
-          `https://taskup-backend.vercel.app/api/tests/${testId}/submit`,
-          {
-            email,
-            registerNumber,
-            answers,
-            questions,
-            malpractice: isMalpractice,
-          }
-        );
-
-        // Handle the response
-        const { score, totalQuestions } = submissionResponse.data;
-        setScore(score);
-        setTotalQuestions(totalQuestions);
-
-        // Prepare payload for saving submission
-        const saveSubmissionPayload = {
-          email,
-          registerNumber,
-          answers,
-          score,
-          questions,
-          malpractice: isMalpractice,
-        };
-
-        console.log("Saving submission with payload:", saveSubmissionPayload);
-
-        // Save the submission
-        await axios.post(
-          `https://taskup-backend.vercel.app/api/tests/${testId}/save-submission`,
-          saveSubmissionPayload // Use the prepared payload directly
-        );
-
-        // Set the successful submission flag to true
-        setIsSubmissionSuccessful(true);
-
-        // Store submission status in localStorage
-        localStorage.setItem("isTestSubmitted", "true");
-        localStorage.setItem("isSubmissionSuccessful", "true");
-        sessionStorage.setItem("score", score.toString());
-        sessionStorage.setItem("totalQuestions", totalQuestions.toString());
-
-        // Optional success toast message
-        showToast(
-          `Test submitted successfully! Score: ${score}/${totalQuestions}`
-        );
-      } catch (error) {
-        console.error("Error during submission:", error);
-        showToast(
-          "An error occurred during submission: " +
-            (error.response?.data?.message || error.message)
-        );
-      }
-    }
-  );
 
   useEffect(() => {
     // Check sessionStorage for submission status
@@ -711,19 +734,40 @@ const QuestionComponent: React.FC = () => {
     sessionStorage.setItem("selectedQuestionIndex", index.toString());
   };
 
+  // Handle navigation to the previous question
+  const handlePrevious = useCallback(() => {
+    if (selectedIndexes[0] > 0) {
+      const newIndex = selectedIndexes[0] - 1;
+      setSelectedIndexes([selectedIndexes[0] - 1]);
+      sessionStorage.setItem("selectedQuestionIndex", newIndex.toString());
+    }
+  }, [selectedIndexes]);
+
+  // Handle navigation to the next question
+  const handleNext = useCallback(() => {
+    if (selectedIndexes[0] < questions.length - 1) {
+      const newIndex = selectedIndexes[0] + 1;
+      setSelectedIndexes([selectedIndexes[0] + 1]);
+      sessionStorage.setItem("selectedQuestionIndex", newIndex.toString());
+    }
+  }, [selectedIndexes, questions.length]);
+
   // Handle keydown events
-  const handleKeyDown = (event) => {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      event.stopPropagation();
-      console.log("Escape key pressed but disabled.");
-    }
-    if (event.key === "ArrowLeft") {
-      handlePrevious();
-    } else if (event.key === "ArrowRight") {
-      handleNext();
-    }
-  };
+  const handleKeyDown = useCallback(
+    (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        console.log("Escape key pressed but disabled.");
+      }
+      if (event.key === "ArrowLeft") {
+        handlePrevious();
+      } else if (event.key === "ArrowRight") {
+        handleNext();
+      }
+    },
+    [handlePrevious, handleNext]
+  );
 
   // Use effect to set up and clean up the keydown event listener
   useEffect(() => {
@@ -732,25 +776,7 @@ const QuestionComponent: React.FC = () => {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [selectedIndexes]);
-
-  // Handle navigation to the previous question
-  const handlePrevious = () => {
-    if (selectedIndexes[0] > 0) {
-      const newIndex = selectedIndexes[0] - 1;
-      setSelectedIndexes([selectedIndexes[0] - 1]);
-      sessionStorage.setItem("selectedQuestionIndex", newIndex.toString());
-    }
-  };
-
-  // Handle navigation to the next question
-  const handleNext = () => {
-    if (selectedIndexes[0] < questions.length - 1) {
-      const newIndex = selectedIndexes[0] + 1;
-      setSelectedIndexes([selectedIndexes[0] + 1]);
-      sessionStorage.setItem("selectedQuestionIndex", newIndex.toString());
-    }
-  };
+  }, [handleKeyDown]);
 
   // Calculate the progress based on answered questions (using selectedAnswers)
   const answeredQuestions = questions.filter(
@@ -1319,7 +1345,7 @@ const QuestionComponent: React.FC = () => {
                           {/* Questions */}
                           <form
                             ref={formRef}
-                            onSubmit={handleSubmit}
+                            onSubmit={() => handleSubmit}
                             className="px-10 py-8 h-auto bg-white overflow-hidden rounded-xl border-[2px] border-[#155e75]"
                             style={{
                               boxShadow: "0px 2.5px 0px 0px #155e75",

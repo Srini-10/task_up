@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Table, Button, Input, Modal, Form, message } from "antd";
 import axios from "axios";
 
@@ -15,23 +15,28 @@ const CreateCandidates = () => {
   });
 
   // Fetch candidates
-  const fetchCandidates = async (params = {}) => {
+  // const fetchCandidates = async () => {
+  //   try {
+
+  //   } catch (error) {
+  //     return message.error("Error fetching candidates.");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  const fetchCandidates = useCallback(async () => {
     setLoading(true);
-    try {
-      const response = await axios.get(
-        "https://taskup-backend.vercel.app/api/testCandidates"
-      );
-      setCandidatesList(response.data);
-      setPagination({
-        ...pagination,
-        total: response.data.length,
-      });
-    } catch (error) {
-      message.error("Error fetching candidates.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    const response = await axios.get(
+      "https://taskup-backend.vercel.app/api/testCandidates"
+    );
+    setCandidatesList(response.data);
+    setPagination({
+      ...pagination,
+      total: response.data.length,
+    });
+    setLoading(false);
+  }, [pagination]);
 
   // Handle table change for pagination and sorting
   const handleTableChange = (pagination, filters, sorter) => {
@@ -49,7 +54,7 @@ const CreateCandidates = () => {
         `https://taskup-backend.vercel.app/api/testCandidates/${candidateId}`
       );
       message.success("Candidate deleted successfully!");
-      fetchCandidates();
+      await fetchCandidates();
     } catch (error) {
       message.error("Error deleting candidate.");
     }
@@ -96,7 +101,7 @@ const CreateCandidates = () => {
 
   useEffect(() => {
     fetchCandidates();
-  }, []);
+  }, [fetchCandidates]);
 
   const columns = [
     {

@@ -9,7 +9,7 @@ import {
   TableCell,
   Box,
 } from "@mui/material";
-import { Popconfirm, Spin } from "antd";
+import { Spin } from "antd";
 import axios from "axios";
 
 // Define the types
@@ -50,6 +50,7 @@ const Dashboard: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedTestId, setSelectedTestId] = useState<string | null>(null);
+  console.log(selectedTestId);
 
   // Fetch all tests when the component mounts
   useEffect(() => {

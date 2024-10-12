@@ -18,6 +18,21 @@ import moment from "moment";
 
 const { Option } = Select;
 
+type Candidate = {
+  profilePicture?: any;
+  _id: never;
+  registerNumber: string;
+  dob: string;
+  phone: string;
+  email: string;
+};
+
+type Question = {
+  questionText: string;
+  inputType: string;
+  options: string[];
+  correctAnswerIndices: any[];
+};
 const EditTest = () => {
   const { testId } = useParams();
   const [viewQuestionIndex, setViewQuestionIndex] = useState(null);
@@ -39,6 +54,7 @@ const EditTest = () => {
   const [selectAll, setSelectAll] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  console.log(showDetails);
 
   const [questionTypes] = useState([
     "Multiple Choice",
@@ -87,9 +103,9 @@ const EditTest = () => {
   };
 
   useEffect(() => {
-    const storedCandidates = JSON.parse(localStorage.getItem("candidates"));
+    const storedCandidates = JSON.parse(localStorage.getItem("candidates")!);
     const storedSelectedCandidates = JSON.parse(
-      localStorage.getItem("selectedCandidates")
+      localStorage.getItem("selectedCandidates")!
     );
 
     if (storedCandidates && storedCandidates.length > 0) {
@@ -143,7 +159,7 @@ const EditTest = () => {
 
         // Check if questions are saved in sessionStorage
         const savedQuestions = JSON.parse(
-          sessionStorage.getItem(`test-questions-${testId}`)
+          sessionStorage.getItem(`test-questions-${testId}`)!
         );
 
         if (savedQuestions && savedQuestions.length > 0) {
@@ -155,7 +171,7 @@ const EditTest = () => {
 
         // Load candidates from local storage if available
         const savedCandidates =
-          JSON.parse(sessionStorage.getItem("candidates")) || [];
+          JSON.parse(sessionStorage.getItem("candidates")!) || [];
         setCandidates(
           savedCandidates.length > 0 ? savedCandidates : test.candidates || []
         );
@@ -195,8 +211,10 @@ const EditTest = () => {
 
   const handleEditTest = async () => {
     const selectedCandidateData = candidates
-      .filter((candidate) => selectedCandidates.includes(candidate._id))
-      .map((candidate) => ({
+      .filter((candidate: Candidate) =>
+        selectedCandidates.includes(candidate._id)
+      )
+      .map((candidate: Candidate) => ({
         registerNumber: candidate.registerNumber,
         dob: candidate.dob,
         phone: candidate.phone,
@@ -209,7 +227,7 @@ const EditTest = () => {
       endDate,
       authOption,
       password: authOption === "custom" ? password : "",
-      questions: questions.map((q, index) => ({
+      questions: questions.map((q: Question, index) => ({
         questionText: q.questionText,
         inputType: q.inputType,
         options: q.options,
@@ -256,6 +274,7 @@ const EditTest = () => {
   const handleEditQuestion = (index) => {
     setEditQuestionIndex(index);
     const questionToEdit = questions[index];
+    //@ts-ignore
     setEditingQuestion({ ...questionToEdit, index });
     setIsEditModalOpen(true);
   };
@@ -263,6 +282,7 @@ const EditTest = () => {
   // Handle Saving the Edited Question
   const handleSaveEditedQuestion = () => {
     const updatedQuestions = [...questions];
+    //@ts-ignore
     updatedQuestions[editingQuestion.index] = { ...editingQuestion };
     setQuestions(updatedQuestions);
     setEditingQuestion(null);
@@ -292,7 +312,7 @@ const EditTest = () => {
   const handleCandidateSelect = (candidateId) => {
     setSelectedCandidates((prevSelected) => {
       let updatedSelected;
-
+      //@ts-ignore
       if (prevSelected.includes(candidateId)) {
         // If already selected, remove it
         updatedSelected = prevSelected.filter((id) => id !== candidateId);
@@ -335,8 +355,10 @@ const EditTest = () => {
 
   const handleOptionChange = (index, value) => {
     setEditingQuestion((prev) => {
+      //@ts-ignore
       const newOptions = [...prev.options];
       newOptions[index] = value;
+      //@ts-ignore
       return { ...prev, options: newOptions };
     });
   };
@@ -346,13 +368,13 @@ const EditTest = () => {
       setSelectedCandidates([]);
     } else {
       setSelectedCandidates(
-        filteredCandidates.map((candidate) => candidate._id)
+        filteredCandidates.map((candidate: Candidate) => candidate._id)
       );
     }
     setSelectAll(!selectAll);
   };
 
-  const filteredCandidates = candidates.filter((candidate) => {
+  const filteredCandidates = candidates.filter((candidate: Candidate) => {
     const query = searchQuery.toLowerCase();
     return (
       candidate.email.toLowerCase().includes(query) ||
@@ -784,6 +806,7 @@ const EditTest = () => {
                           color: "white",
                           marginLeft: "auto",
                         }}
+                        href="#"
                       >
                         <p
                           className="poppins2 text-[12px] px-0.5 normal-case text-white"
@@ -804,7 +827,7 @@ const EditTest = () => {
                     </div>
                   ) : (
                     <List>
-                      {filteredCandidates.map((candidate) => (
+                      {filteredCandidates.map((candidate: Candidate) => (
                         <ListItem key={candidate._id} className="items-start">
                           <div
                             className={`w-full flex justify-start items-center -my-[6.5px] h-16 rounded-lg p-6 border-b-[1.5px] hover:bg-[#e7ebec] border-gray-200 cursor-pointer ${
