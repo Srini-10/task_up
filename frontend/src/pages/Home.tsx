@@ -368,9 +368,7 @@ const Home = () => {
               className="bg-white rounded shadow-md"
               label="Start Date and Time"
               type="datetime-local"
-              value={
-                startDate ? new Date(startDate).toISOString().slice(0, -1) : ""
-              }
+              value={startDate}
               onChange={handleStartDateChange}
               fullWidth
               margin="normal"
@@ -382,9 +380,7 @@ const Home = () => {
               className="bg-white rounded shadow-md"
               label="End Date and Time"
               type="datetime-local"
-              value={
-                endDate ? new Date(endDate).toISOString().slice(0, -1) : ""
-              }
+              value={endDate}
               onChange={handleEndDateChange}
               fullWidth
               margin="normal"

@@ -1,10 +1,12 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const multer = require("multer");
+const serviceAccount = require("./path/to/your-serviceAccountKey.json");
+const admin = require("firebase-admin");
 const path = require("path");
 const cors = require("cors");
 const TestSubmission = require("./Module/TestSubmission.js");
-const CreateCandidate = require("./Module/CreateCandidate.js");
+const candidatesCollection = db.collection("candidates");
 const app = express();
 require("dotenv").config();
 const allowedOrigins = [
@@ -12,10 +14,17 @@ const allowedOrigins = [
   "http://localhost:3000", // Local development
 ];
 
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+
+const db = admin.firestore();
+const firebaseStorage = admin.storage();
+const bucket = firebaseStorage.bucket();
+
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or Postman)
       if (!origin || allowedOrigins.indexOf(origin) !== -1) {
         callback(null, origin);
       } else {
@@ -51,9 +60,9 @@ const upload = multer({ storage: storage });
 
 const QuestionSchema = new mongoose.Schema({
   questionText: { type: String, required: true },
-  inputType: { type: String, required: true }, // e.g., "text", "radio", etc.
+  inputType: { type: String, required: true },
   options: { type: [String], default: [] },
-  correctAnswerIndices: { type: [String], required: true }, // Array for multiple correct answers
+  correctAnswerIndices: { type: [String], required: true },
 });
 
 // Define the schema for tests
@@ -91,30 +100,44 @@ app.post(
   async (req, res) => {
     try {
       const { registerNumber, dob, email, phone } = req.body;
-      const profilePicture = req.file ? req.file.filename : null;
+      const profilePicture = req.file ? req.file.path : null;
 
       // Check if register number exists
-      const existingCandidate = await CreateCandidate.findOne({
-        registerNumber,
-      });
+      const existingCandidateSnapshot = await candidatesCollection
+        .where("registerNumber", "==", registerNumber)
+        .get();
 
-      if (existingCandidate) {
+      if (!existingCandidateSnapshot.empty) {
         return res
           .status(400)
           .json({ message: "Register number already exists" });
       }
 
-      // Save the candidate data to MongoDB
-      const newCandidate = new CreateCandidate({
+      // If there is a profile picture, upload it to Firebase Storage
+      let profilePictureUrl = null;
+      if (profilePicture) {
+        const fileName = Date.now() + path.extname(req.file.originalname);
+        const fileUpload = admin.storage().bucket().file(fileName);
+        await fileUpload.save(req.file.buffer, {
+          contentType: req.file.mimetype,
+          public: true,
+        });
+        profilePictureUrl = `https://storage.googleapis.com/${
+          admin.storage().bucket().name
+        }/${fileName}`;
+      }
+
+      // Save candidate data to Firestore
+      const newCandidate = {
         registerNumber,
         dob,
         email,
         phone,
-        profilePicture, // Save the file name in the database
-      });
+        profilePicture: profilePictureUrl, // Save the URL from Firebase Storage
+      };
 
-      await newCandidate.save();
-      res.status(201).json({ message: "candidate registered successfully!" });
+      await candidatesCollection.add(newCandidate);
+      res.status(201).json({ message: "Candidate registered successfully!" });
     } catch (error) {
       console.error("Error registering candidate:", error);
       res.status(500).json({ message: "Error registering candidate." });
@@ -131,6 +154,7 @@ app.put(
       const { id } = req.params;
       const { registerNumber, dob, email, phone } = req.body;
 
+      // Prepare the updated candidate data
       const updatedFields = {
         registerNumber,
         dob,
@@ -138,23 +162,27 @@ app.put(
         phone,
       };
 
-      // Update profile picture only if a new one is uploaded
+      let profilePictureUrl = null;
+
+      // If a new profile picture is uploaded, upload it to Firebase Storage
       if (req.file) {
-        updatedFields.profilePicture = req.file.filename;
+        const fileName = Date.now() + path.extname(req.file.originalname);
+        const fileUpload = admin.storage().bucket().file(fileName);
+        await fileUpload.save(req.file.buffer, {
+          contentType: req.file.mimetype,
+          public: true,
+        });
+        profilePictureUrl = `https://storage.googleapis.com/${
+          admin.storage().bucket().name
+        }/${fileName}`;
+        updatedFields.profilePicture = profilePictureUrl;
       }
 
-      // Update the candidate record in the database
-      const updatedcandidate = await CreateCandidate.findByIdAndUpdate(
-        id,
-        updatedFields,
-        { new: true }
-      );
+      // Update candidate in Firestore
+      const candidateDoc = db.collection("candidates").doc(id);
+      await candidateDoc.update(updatedFields);
 
-      if (!updatedcandidate) {
-        return res.status(404).send("candidate not found");
-      }
-
-      res.send("candidate updated successfully");
+      res.send("Candidate updated successfully");
     } catch (error) {
       console.error("Error updating candidate: ", error);
       res.status(500).send("Error updating candidate");
@@ -165,7 +193,11 @@ app.put(
 // Get all candidates
 app.get("/api/testCandidates", async (req, res) => {
   try {
-    const candidates = await CreateCandidate.find();
+    const snapshot = await candidatesCollection.get();
+    const candidates = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
     res.json(candidates);
   } catch (error) {
     res.status(500).json({ message: "Error fetching candidates." });
@@ -176,13 +208,11 @@ app.get("/api/testCandidates", async (req, res) => {
 app.delete("/api/testCandidates/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const deletedcandidate = await CreateCandidate.findByIdAndDelete(id);
 
-    if (!deletedcandidate) {
-      return res.status(404).send("candidate not found");
-    }
+    // Delete the candidate from Firestore
+    await db.collection("candidates").doc(id).delete();
 
-    res.send("candidate deleted successfully");
+    res.send("Candidate deleted successfully");
   } catch (error) {
     res.status(500).send("Error deleting candidate");
   }
@@ -409,8 +439,6 @@ app.delete("/api/tests/:testId", async (req, res) => {
     res.status(500).json({ message: "Server error while deleting the test." });
   }
 });
-
-// Assuming you already have the necessary imports and initial setup
 
 // PUT route to update a specific question
 app.put("/api/tests/:testId/questions/:questionId", async (req, res) => {

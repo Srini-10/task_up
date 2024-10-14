@@ -13,7 +13,6 @@ function AppRouter() {
       <Route path="/Dashboard" element={<Dashboard />} />
       <Route path="/CreateCandidates" element={<CreateCandidates />} />
       <Route path="/tests/edit/:testId" element={<EditTest />} />
-      <Route path="/tests/:testId" element={<QuestionComponent />} />
     </Routes>
   );
 }

@@ -140,13 +140,14 @@ const EditTest = () => {
 
         const formattedStartDate = test.startDate
           ? new Date(test.startDate.$date || test.startDate)
-              .toISOString()
-              .slice(0, 16)
+              .toLocaleString("sv-SE", { timeZoneName: "short" }) // Converts to local time
+              .slice(0, 16) // Format as YYYY-MM-DDTHH:MM for `datetime-local`
           : "";
+
         const formattedEndDate = test.endDate
           ? new Date(test.endDate.$date || test.endDate)
-              .toISOString()
-              .slice(0, 16)
+              .toLocaleString("sv-SE", { timeZoneName: "short" }) // Converts to local time
+              .slice(0, 16) // Format as YYYY-MM-DDTHH:MM for `datetime-local`
           : "";
 
         setTestName(test.testName);
@@ -221,10 +222,14 @@ const EditTest = () => {
         email: candidate.email,
       }));
 
+    // Convert startDate and endDate to UTC before sending to backend
+    const utcStartDate = new Date(startDate).toISOString();
+    const utcEndDate = new Date(endDate).toISOString();
+
     const updatedTestData = {
       testName,
-      startDate,
-      endDate,
+      startDate: utcStartDate,
+      endDate: utcEndDate,
       authOption,
       password: authOption === "custom" ? password : "",
       questions: questions.map((q: Question, index) => ({
@@ -269,6 +274,16 @@ const EditTest = () => {
     localStorage.removeItem("candidates");
     localStorage.removeItem("questions");
     localStorage.removeItem("selectedCandidates");
+  };
+
+  const handleStartDateChange = (e) => {
+    const localDate = e.target.value;
+    setStartDate(localDate); // Store local date for display in the input
+  };
+
+  const handleEndDateChange = (e) => {
+    const localDate = e.target.value;
+    setEndDate(localDate); // Store local date for display in the input
   };
 
   const handleEditQuestion = (index) => {
@@ -676,7 +691,7 @@ const EditTest = () => {
               label="Start Date and Time"
               type="datetime-local"
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              onChange={handleStartDateChange}
               fullWidth
               margin="normal"
               InputLabelProps={{
@@ -688,7 +703,7 @@ const EditTest = () => {
               label="End Date and Time"
               type="datetime-local"
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              onChange={handleEndDateChange}
               fullWidth
               margin="normal"
               InputLabelProps={{
