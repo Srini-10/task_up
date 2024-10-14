@@ -12,10 +12,10 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "/"
+      "dest": "/index.html"
     }
   ],
   "env": {
-    "REACT_APP_API_URL": "https://taskup-backend.vercel.app "
+    "REACT_APP_API_URL": "https://taskup-backend.vercel.app"
   }
 }
