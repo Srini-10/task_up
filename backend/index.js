@@ -5,7 +5,7 @@ const path = require("path");
 const cors = require("cors");
 const TestSubmission = require("./Module/TestSubmission.js");
 const CreateCandidate = require("./Module/CreateCandidate.js");
-const cloudinary = require("./cloudinaryConfig.js");
+const cloudinary = require("./Module/cloudinaryConfig.js");
 const app = express();
 require("dotenv").config();
 const allowedOrigins = [
