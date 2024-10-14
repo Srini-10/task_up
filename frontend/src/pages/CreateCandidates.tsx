@@ -17,12 +17,6 @@ import {
 import { Modal } from "antd";
 import { PlusIcon } from "./NextUI/PlusIcon";
 import { VerticalDotsIcon } from "./NextUI/VerticalDotsIcon";
-import {
-  storage,
-  ref,
-  uploadBytes,
-  getDownloadURL,
-} from "../firebaseConfig.ts";
 
 type Candidate = {
   registerNumber: string;

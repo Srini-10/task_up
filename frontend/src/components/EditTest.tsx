@@ -13,8 +13,7 @@ import { useParams } from "react-router-dom";
 import SearchIcon from "../assets/Search_Icon.svg";
 import DefaultProfile from "../assets/User_Profile.svg";
 import { showToast } from "../toastUtil.js";
-import { DatePicker, Form, Input, Modal, Select, Popconfirm, Spin } from "antd";
-import moment from "moment";
+import { Form, Input, Modal, Select, Popconfirm, Spin } from "antd";
 
 const { Option } = Select;
 
@@ -90,7 +89,7 @@ const EditTest = () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        "https://taskup-backend.vercel.app /api/testCandidates"
+        "https://taskup-backend.vercel.app/api/testCandidates"
       );
       setCandidates(response.data);
       console.log(response.data);
@@ -134,7 +133,7 @@ const EditTest = () => {
     const fetchTestDetails = async () => {
       try {
         const response = await axios.get(
-          `https://taskup-backend.vercel.app /api/tests/${testId}`
+          `https://taskup-backend.vercel.app/api/tests/${testId}`
         );
         const test = response.data;
 
@@ -245,7 +244,7 @@ const EditTest = () => {
 
     try {
       await axios.put(
-        `https://taskup-backend.vercel.app /api/tests/${testId}`,
+        `https://taskup-backend.vercel.app/api/tests/${testId}`,
         updatedTestData
       );
       showToast("Test updated successfully!");

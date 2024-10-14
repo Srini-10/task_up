@@ -24,7 +24,7 @@ const TestContainer: React.FC = () => {
     const fetchTests = async () => {
       try {
         const response = await axios.get(
-          "https://taskup-backend.vercel.app /api/tests/recent"
+          "https://taskup-backend.vercel.app/api/tests/recent"
         );
         setTests(response.data);
         setLoading(false);
@@ -43,7 +43,7 @@ const TestContainer: React.FC = () => {
     setLoadingAnimation(true);
     try {
       const response = await axios.delete(
-        `https://taskup-backend.vercel.app /api/tests/${testId}`
+        `https://taskup-backend.vercel.app/api/tests/${testId}`
       );
       showToast(response.data.message);
       // After deletion, fetch the updated list of tests
@@ -126,7 +126,7 @@ const TestContainer: React.FC = () => {
               <div className="flex justify-between -mt-4 items-end">
                 <p className="text-[13px] flex flex-col">
                   <a
-                    href={`http://taskup-brix.vercel.app/tests/${test._id}`}
+                    href={`https://taskup-brix.vercel.app/tests/${test._id}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[13px] text-slate-600"

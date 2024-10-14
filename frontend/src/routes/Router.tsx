@@ -4,7 +4,6 @@ import Home from "../pages/Home.tsx";
 import EditTest from "../components/EditTest.tsx";
 import Dashboard from "../components/Dashboard/Dashboard.tsx";
 import CreateCandidates from "../pages/CreateCandidates.tsx";
-import QuestionComponent from "../components/Questions.tsx";
 
 function AppRouter() {
   return (

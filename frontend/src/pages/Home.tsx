@@ -16,7 +16,6 @@ import TestContainer from "../components/TestContainer.tsx";
 import SearchIcon from "../assets/Search_Icon.svg";
 import DefaultProfile from "../assets/User_Profile.svg";
 import { Form, Input, Modal, Select, Popconfirm } from "antd";
-import moment from "moment";
 import { showToast } from "../toastUtil.js";
 
 const { Option } = Select;
@@ -78,7 +77,7 @@ const Home = () => {
     const fetchInputTypes = async () => {
       try {
         const response = await axios.get(
-          "https://taskup-backend.vercel.app /api/inputTypes"
+          "https://taskup-backend.vercel.app/api/inputTypes"
         );
         setInputTypes(response.data);
       } catch (error) {
@@ -89,35 +88,68 @@ const Home = () => {
     fetchInputTypes();
   }, []);
 
-  const fetchCandidates = async () => {
-    try {
-      const response = await axios.get(
-        "https://taskup-backend.vercel.app /api/testCandidates"
-      );
-      setCandidates(response.data);
-      console.log(response.data);
-      localStorage.setItem("candidates", JSON.stringify(response.data));
-    } catch (error) {
-      console.error("Error fetching candidates:", error);
-    }
-  };
-
   useEffect(() => {
-    const storedCandidates = JSON.parse(localStorage.getItem("candidates"));
-    const storedSelectedCandidates = JSON.parse(
-      localStorage.getItem("selectedCandidates")
-    );
+    const fetchCandidates = async () => {
+      try {
+        const response = await fetch(
+          "https://taskup-backend.vercel.app/api/testCandidates"
+        );
 
-    if (storedCandidates && storedCandidates.length > 0) {
-      setCandidates(storedCandidates);
-    } else {
-      fetchCandidates();
-    }
+        console.log(response.data);
+        const data = await response.json();
+        setCandidates(data);
 
-    if (storedSelectedCandidates) {
-      setSelectedCandidates(storedSelectedCandidates);
-    }
+        // Create an array to hold the updated candidates with actual image URLs
+        const updatedCandidates = data.map((candidate: Candidate) => {
+          // Check if the candidate has a profile picture
+          if (candidate.profilePicture) {
+            // Construct the image URL assuming the backend serves images from /uploads folder
+            const profilePictureURL = `https://taskup-backend.vercel.app/uploads/${candidate.profilePicture}`;
+            console.log(
+              `Candidate ${candidate.registerNumber} Profile Picture:`,
+              profilePictureURL
+            );
+
+            // Return the candidate object with the updated profilePicture URL
+            return {
+              ...candidate,
+              profilePicture: profilePictureURL,
+            };
+          }
+
+          // If no profile picture, return the candidate as is
+          return candidate;
+        });
+
+        // Update the state with the modified candidates
+        setCandidates(updatedCandidates);
+      } catch (error) {
+        console.error(
+          "Error fetching candidates or their profile pictures:",
+          error
+        );
+      }
+    };
+
+    fetchCandidates();
   }, []);
+
+  // useEffect(() => {
+  //   const storedCandidates = JSON.parse(localStorage.getItem("candidates"));
+  //   const storedSelectedCandidates = JSON.parse(
+  //     localStorage.getItem("selectedCandidates")
+  //   );
+
+  //   if (storedCandidates && storedCandidates.length > 0) {
+  //     setCandidates(storedCandidates);
+  //   } else {
+  //     fetchCandidates();
+  //   }
+
+  //   if (storedSelectedCandidates) {
+  //     setSelectedCandidates(storedSelectedCandidates);
+  //   }
+  // }, []);
 
   // Store candidates and selectedCandidates in localStorage on change
 
@@ -166,7 +198,7 @@ const Home = () => {
 
     try {
       const response = await axios.post(
-        "https://taskup-backend.vercel.app /api/tests",
+        "https://taskup-backend.vercel.app/api/tests",
         testData
       );
       console.log(response.data);
@@ -426,7 +458,7 @@ const Home = () => {
                 className="flex justify-center items-center"
               >
                 <div
-                  className="w-[50vw] h-[70vh] justify-start flex flex-col mx-auto"
+                  className="w-[50vw] h-[70vh] justify-start flex flex-col mx-auto overflow-y-scroll scroll-smooth"
                   style={{
                     padding: "5px",
                     background: "#fff",
