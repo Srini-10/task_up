@@ -9,7 +9,7 @@ function App() {
   const location = useLocation();
 
   // Check if the current path matches "/tests/:testId"
-  const isTestPage = location.pathname.startsWith("/tests/");
+  const isTestPage = location.pathname.startsWith("/tests/:testId");
 
   return (
     <>
