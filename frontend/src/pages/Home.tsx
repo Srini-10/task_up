@@ -15,7 +15,7 @@ import axios from "axios";
 import TestContainer from "../components/TestContainer.tsx";
 import SearchIcon from "../assets/Search_Icon.svg";
 import DefaultProfile from "../assets/User_Profile.svg";
-import { DatePicker, Form, Input, Modal, Select, Popconfirm } from "antd";
+import { Form, Input, Modal, Select, Popconfirm } from "antd";
 import moment from "moment";
 import { showToast } from "../toastUtil.js";
 
@@ -310,6 +310,22 @@ const Home = () => {
     handleDeleteQuestion(index);
   };
 
+  const handleStartDateChange = (e) => {
+    const localDate = new Date(e.target.value);
+    const utcDate = new Date(
+      localDate.getTime() - localDate.getTimezoneOffset() * 60000
+    ).toISOString();
+    setStartDate(utcDate);
+  };
+
+  const handleEndDateChange = (e) => {
+    const localDate = new Date(e.target.value);
+    const utcDate = new Date(
+      localDate.getTime() - localDate.getTimezoneOffset() * 60000
+    ).toISOString();
+    setEndDate(utcDate);
+  };
+
   // Filtering candidates based on search query
   const filteredCandidates = candidates.filter((candidate) => {
     const query = searchQuery.toLowerCase();
@@ -350,40 +366,32 @@ const Home = () => {
             Test Duration
           </h1>
           <div className="w-full justify-between flex items-center mt-1.5 gap-3">
-            <DatePicker
-              required
-              showTime={{
-                format: "HH:mm",
-              }}
-              format="YYYY-MM-DD HH:mm"
-              placeholder="Start Date and Time"
-              value={startDate ? moment(startDate) : null}
-              onChange={(date, dateString) => setStartDate(dateString)}
-              style={{
-                width: "100%",
-                backgroundColor: "#ffffff",
-                borderRadius: "8px",
-                border: "1px solid #d1d5db",
-                boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
-                padding: "8px 12px",
+            <TextField
+              className="bg-white rounded shadow-md"
+              label="Start Date and Time"
+              type="datetime-local"
+              value={
+                startDate ? new Date(startDate).toISOString().slice(0, -1) : ""
+              }
+              onChange={handleStartDateChange}
+              fullWidth
+              margin="normal"
+              InputLabelProps={{
+                shrink: true,
               }}
             />
-            <DatePicker
-              required
-              showTime={{
-                format: "HH:mm",
-              }}
-              format="YYYY-MM-DD HH:mm"
-              placeholder="End Date and Time"
-              value={endDate ? moment(endDate) : null}
-              onChange={(date, dateString) => setEndDate(dateString)}
-              style={{
-                width: "100%",
-                backgroundColor: "#ffffff",
-                borderRadius: "8px",
-                border: "1px solid #d1d5db",
-                boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
-                padding: "8px 12px",
+            <TextField
+              className="bg-white rounded shadow-md"
+              label="End Date and Time"
+              type="datetime-local"
+              value={
+                endDate ? new Date(endDate).toISOString().slice(0, -1) : ""
+              }
+              onChange={handleEndDateChange}
+              fullWidth
+              margin="normal"
+              InputLabelProps={{
+                shrink: true,
               }}
             />
           </div>

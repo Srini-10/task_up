@@ -8,5 +8,5 @@ const candidateSchema = new mongoose.Schema({
   profilePicture: String,
 });
 
-const CreateCandidate = mongoose.model("Createcandidate", candidateSchema);
+const CreateCandidate = mongoose.model("CreateCandidate", candidateSchema);
 module.exports = CreateCandidate;

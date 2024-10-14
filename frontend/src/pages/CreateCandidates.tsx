@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Table, Button, Input, Modal, Form, message } from "antd";
+import { Table, Button, Input, Modal, Form, message, Spin } from "antd";
 import axios from "axios";
+import { showToast } from "../toastUtil";
 
 const CreateCandidates = () => {
   const [candidatesList, setCandidatesList] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editCandidateId, setEditCandidateId] = useState(null);
   const [form] = Form.useForm();
@@ -26,7 +26,6 @@ const CreateCandidates = () => {
   // };
 
   const fetchCandidates = useCallback(async () => {
-    setLoading(true);
     const response = await axios.get(
       "https://taskup-backend.vercel.app/api/testCandidates"
     );
@@ -35,7 +34,6 @@ const CreateCandidates = () => {
       ...pagination,
       total: response.data.length,
     });
-    setLoading(false);
   }, [pagination]);
 
   // Handle table change for pagination and sorting
@@ -44,7 +42,6 @@ const CreateCandidates = () => {
       ...pagination,
       current: pagination.current,
     });
-    // Sorting functionality can be applied here if needed
   };
 
   // Delete candidate
@@ -160,10 +157,10 @@ const CreateCandidates = () => {
           }}
         />
       </div>
+
       <Table
         columns={columns}
         dataSource={candidatesList}
-        loading={loading}
         rowKey="_id"
         pagination={pagination}
         onChange={handleTableChange}

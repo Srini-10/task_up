@@ -191,14 +191,9 @@ app.delete("/api/testCandidates/:id", async (req, res) => {
 // POST route to create a new test
 app.post("/api/tests", async (req, res) => {
   try {
-    const {
-      testName,
-      startDate,
-      endDate,
-      authOption,
-      questions = [],
-      candidates = [],
-    } = req.body;
+    const { testName, authOption, questions = [], candidates = [] } = req.body;
+    const utcStartDate = new Date(startDate).toISOString();
+    const utcEndDate = new Date(endDate).toISOString();
 
     // Log the received body to verify if the candidates and questions exist
     console.log("Received candidates:", candidates);
@@ -223,8 +218,8 @@ app.post("/api/tests", async (req, res) => {
     // Create a new test instance
     const newTest = new Test({
       testName,
-      startDate,
-      endDate,
+      startDate: utcStartDate,
+      endDate: utcEndDate,
       authOption,
       questions: validatedQuestions,
       candidates: formattedCandidates,

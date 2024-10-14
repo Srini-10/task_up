@@ -126,7 +126,7 @@ const TestContainer: React.FC = () => {
               <div className="flex justify-between -mt-4 items-end">
                 <p className="text-[13px] flex flex-col">
                   <a
-                    href={`http://localhost:3000/tests/${test._id}`}
+                    href={`http://taskup-brix.vercel.app/tests/${test._id}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[13px] text-slate-600"

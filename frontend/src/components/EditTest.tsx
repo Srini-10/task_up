@@ -671,40 +671,28 @@ const EditTest = () => {
             }}
           />
           <div className="w-full justify-between flex items-center mt-1.5 gap-3">
-            <DatePicker
-              required
-              showTime={{
-                format: "HH:mm",
-              }}
-              format="YYYY-MM-DD HH:mm"
-              placeholder="Start Date and Time"
-              value={startDate ? moment(startDate) : null}
-              onChange={(date, dateString) => setStartDate(dateString)}
-              style={{
-                width: "100%",
-                backgroundColor: "#ffffff",
-                borderRadius: "8px",
-                border: "1px solid #d1d5db",
-                boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
-                padding: "8px 12px",
+            <TextField
+              className="bg-white rounded shadow-md"
+              label="Start Date and Time"
+              type="datetime-local"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              fullWidth
+              margin="normal"
+              InputLabelProps={{
+                shrink: true,
               }}
             />
-            <DatePicker
-              required
-              showTime={{
-                format: "HH:mm",
-              }}
-              format="YYYY-MM-DD HH:mm"
-              placeholder="End Date and Time"
-              value={endDate ? moment(endDate) : null}
-              onChange={(date, dateString) => setEndDate(dateString)}
-              style={{
-                width: "100%",
-                backgroundColor: "#ffffff",
-                borderRadius: "8px",
-                border: "1px solid #d1d5db",
-                boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
-                padding: "8px 12px",
+            <TextField
+              className="bg-white rounded shadow-md"
+              label="End Date and Time"
+              type="datetime-local"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              fullWidth
+              margin="normal"
+              InputLabelProps={{
+                shrink: true,
               }}
             />
           </div>
