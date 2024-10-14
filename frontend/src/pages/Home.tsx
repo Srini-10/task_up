@@ -13,16 +13,45 @@ import {
 import AddQuestion from "../components/AddQuestion.tsx";
 import axios from "axios";
 import TestContainer from "../components/TestContainer.tsx";
-import SearchIcon from "../assets/Search_Icon.svg";
-import DefaultProfile from "../assets/User_Profile.svg";
+import SearchIcon from "../assets/searchIcon.tsx";
+import DefaultProfile from "../assets/userProfile.tsx";
 import { Form, Input, Modal, Select, Popconfirm } from "antd";
+import EditIcon from "../assets/EditIcon.tsx";
+import TrashIcon from "../assets/TrashIcon.tsx";
+import EyeIcon from "../assets/EyeIcon.tsx";
 import { showToast } from "../toastUtil.js";
 
 const { Option } = Select;
 
+interface Question {
+  id: string;
+  inputType: string;
+  questionText: string;
+  options: string[];
+  correctAnswerIndices: number[];
+  index: number;
+}
+
+interface Candidate {
+  _id: string;
+  registerNumber: string;
+  profilePicture?: string;
+  email: string;
+  dob?: string;
+  phone?: string;
+}
+
 const Home = () => {
   const [viewQuestionIndex, setViewQuestionIndex] = useState(null);
   const [editQuestionIndex, setEditQuestionIndex] = useState(null);
+  const [editingQuestion, setEditingQuestion] = useState<Question>({
+    id: "",
+    inputType: "",
+    questionText: "",
+    options: [],
+    correctAnswerIndices: [],
+    index: 0,
+  });
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -36,11 +65,15 @@ const Home = () => {
   const [endDate, setEndDate] = useState(localStorage.getItem("endDate") || "");
   const [authOption, setAuthOption] = useState("candidateInfo");
   const [password, setPassword] = useState("");
-  const [questions, setQuestions] = useState([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [candidates, setCandidates] = useState([]);
-  const [selectedCandidates, setSelectedCandidates] = useState([]);
-  const [editingQuestion, setEditingQuestion] = useState(null);
-  const [inputTypes, setInputTypes] = useState([]);
+  const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
+  const [inputTypes, setInputTypes] = useState<string[]>([
+    "Multiple Choice",
+    "Select",
+    "Radio",
+    "Text Input",
+  ]);
   const [showDetails, setShowDetails] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -53,9 +86,13 @@ const Home = () => {
     "Text Input",
   ]);
 
+  console.log(inputTypes);
+
   // Load questions from localStorage when the component mounts
   useEffect(() => {
-    const storedQuestions = JSON.parse(localStorage.getItem("questions"));
+    const storedQuestions = JSON.parse(
+      localStorage.getItem("questions") as string
+    );
     if (storedQuestions && storedQuestions.length > 0) {
       setQuestions(storedQuestions);
     }
@@ -95,12 +132,12 @@ const Home = () => {
           "https://taskup-backend.vercel.app/api/testCandidates"
         );
 
-        console.log(response.data);
         const data = await response.json();
+        console.log(data);
         setCandidates(data);
 
         // Create an array to hold the updated candidates with actual image URLs
-        const updatedCandidates = data.map((candidate: Candidate) => {
+        const updatedCandidates = data.map((candidate: any) => {
           // Check if the candidate has a profile picture
           if (candidate.profilePicture) {
             // Construct the image URL assuming the backend serves images from /uploads folder
@@ -134,25 +171,61 @@ const Home = () => {
     fetchCandidates();
   }, []);
 
-  // useEffect(() => {
-  //   const storedCandidates = JSON.parse(localStorage.getItem("candidates"));
-  //   const storedSelectedCandidates = JSON.parse(
-  //     localStorage.getItem("selectedCandidates")
-  //   );
+  useEffect(() => {
+    const storedCandidates = JSON.parse(
+      localStorage.getItem("candidates") as any
+    );
+    const storedSelectedCandidates = JSON.parse(
+      localStorage.getItem("selectedCandidates") as any
+    );
 
-  //   if (storedCandidates && storedCandidates.length > 0) {
-  //     setCandidates(storedCandidates);
-  //   } else {
-  //     fetchCandidates();
-  //   }
+    if (storedCandidates && storedCandidates.length > 0) {
+      setCandidates(storedCandidates);
+    } else {
+      const fetchCandidates = async () => {
+        try {
+          const response = await fetch(
+            "https://taskup-backend.vercel.app/api/testCandidates"
+          );
 
-  //   if (storedSelectedCandidates) {
-  //     setSelectedCandidates(storedSelectedCandidates);
-  //   }
-  // }, []);
+          const data = await response.json();
+          console.log(data);
+
+          const updatedCandidates = data.map((candidate: any) => {
+            if (candidate.profilePicture) {
+              const profilePictureURL = `https://taskup-backend.vercel.app/uploads/${candidate.profilePicture}`;
+              console.log(
+                `Candidate ${candidate.registerNumber} Profile Picture:`,
+                profilePictureURL
+              );
+
+              return {
+                ...candidate,
+                profilePicture: profilePictureURL,
+              };
+            }
+
+            return candidate;
+          });
+
+          setCandidates(updatedCandidates);
+        } catch (error) {
+          console.error(
+            "Error fetching candidates or their profile pictures:",
+            error
+          );
+        }
+      };
+
+      fetchCandidates();
+    }
+
+    if (storedSelectedCandidates) {
+      setSelectedCandidates(storedSelectedCandidates);
+    }
+  }, []);
 
   // Store candidates and selectedCandidates in localStorage on change
-
   const handleCreateTest = async (event) => {
     event.preventDefault();
     setLoading(true);
@@ -167,8 +240,10 @@ const Home = () => {
 
     // Find the selected candidates by matching _id with selectedCandidates array
     const selectedCandidateData = candidates
-      .filter((candidate) => selectedCandidates.includes(candidate._id))
-      .map((candidate) => ({
+      .filter((candidate: any) =>
+        selectedCandidates.includes(candidate._id as never)
+      )
+      .map((candidate: any) => ({
         registerNumber: candidate.registerNumber,
         dob: candidate.dob,
         email: candidate.email,
@@ -185,7 +260,7 @@ const Home = () => {
       endDate: utcEndDate,
       authOption,
       password: authOption === "custom" ? password : "",
-      questions: questions.map((q) => ({
+      questions: questions.map((q: any) => ({
         questionText: q.questionText,
         inputType: q.inputType,
         options: q.options,
@@ -233,24 +308,12 @@ const Home = () => {
     }
   }, []);
 
-  const handleCandidateSelect = (candidateId) => {
-    setSelectedCandidates((prevSelected) => {
-      let updatedSelected;
-
-      if (prevSelected.includes(candidateId)) {
-        updatedSelected = prevSelected.filter((id) => id !== candidateId);
-      } else {
-        updatedSelected = [...prevSelected, candidateId];
-      }
-
-      // Save the updated selected candidates to sessionStorage
-      localStorage.setItem(
-        "selectedCandidates",
-        JSON.stringify(updatedSelected)
-      );
-
-      return updatedSelected;
-    });
+  const handleCandidateSelect = (candidateId: string) => {
+    setSelectedCandidates((prevSelected) =>
+      prevSelected.includes(candidateId)
+        ? prevSelected.filter((id) => id !== candidateId)
+        : [...prevSelected, candidateId]
+    );
   };
 
   const handleSelectAll = () => {
@@ -258,16 +321,15 @@ const Home = () => {
       setSelectedCandidates([]);
     } else {
       setSelectedCandidates(
-        filteredCandidates.map((candidate) => candidate._id)
+        filteredCandidates.map((candidate: any) => candidate._id)
       ); // Select all
     }
     setSelectAll(!selectAll);
   };
 
-  const handleCorrectAnswerSelect = (selectedIndices) => {
-    // Ensure correctAnswerIndices is an array
+  const handleCorrectAnswerSelect = (selectedIndices: number | number[]) => {
     setEditingQuestion((prev) => ({
-      ...prev,
+      ...prev, // Spread the previous state
       correctAnswerIndices: Array.isArray(selectedIndices)
         ? selectedIndices
         : [selectedIndices],
@@ -313,16 +375,10 @@ const Home = () => {
     setModalVisible(false);
   };
 
-  // Handle Adding a new question
-  const handleAddQuestion = (newQuestion) => {
-    setQuestions([...questions, newQuestion]);
-  };
-
   // Handle Editing a question
   const handleEditQuestion = (index) => {
     setEditQuestionIndex(index);
-    const questionToEdit = questions[index];
-    setEditingQuestion({ ...questionToEdit, index });
+    setEditingQuestion(questions[index]);
     setIsEditModalOpen(true);
   };
 
@@ -331,7 +387,8 @@ const Home = () => {
     const updatedQuestions = [...questions];
     updatedQuestions[editingQuestion.index] = { ...editingQuestion };
     setQuestions(updatedQuestions);
-    setEditingQuestion(null);
+
+    setEditingQuestion({} as Question);
     setIsEditModalOpen(false);
   };
 
@@ -357,15 +414,17 @@ const Home = () => {
   };
 
   // Filtering candidates based on search query
-  const filteredCandidates = candidates.filter((candidate) => {
-    const query = searchQuery.toLowerCase();
-    return (
-      candidate.email.toLowerCase().includes(query) ||
-      candidate.phone.includes(query) ||
-      candidate.registerNumber.includes(query) ||
-      (candidate.dob && candidate.dob.includes(query))
-    );
-  });
+  const filteredCandidates: Candidate[] = candidates.filter(
+    (candidate: any) => {
+      const query = searchQuery.toLowerCase();
+      return (
+        candidate.email.toLowerCase().includes(query) ||
+        candidate.phone.includes(query) ||
+        candidate.registerNumber.includes(query) ||
+        (candidate.dob && candidate.dob.includes(query))
+      );
+    }
+  );
 
   return (
     <>
@@ -489,7 +548,7 @@ const Home = () => {
 
                     <div className="flex justify-between items-center">
                       <div className="flex justify-between mt-2 mb-3 items-center gap-1">
-                        <img className="w-7" src={SearchIcon} alt="" />
+                        <SearchIcon />
                         <TextField
                           className="poppins text-[16px] font-medium text-slate-300"
                           placeholder="Search candidates"
@@ -510,6 +569,7 @@ const Home = () => {
                         />
                       </div>
                       <Button
+                        href="#"
                         type="primary"
                         onClick={handleSelectAll}
                         style={{
@@ -550,15 +610,17 @@ const Home = () => {
                             }
                             style={{ display: "none" }} // Hide the checkbox
                           />
-                          <img
-                            src={
-                              candidate.profilePicture
-                                ? candidate.profilePicture
-                                : DefaultProfile
-                            }
-                            alt={`${candidate.registerNumber}'s profile`}
-                            className="w-10 h-10 bg-slate-400 p-2.5 rounded-lg mr-4"
-                          />
+                          {candidate.profilePicture ? (
+                            <img
+                              src={candidate.profilePicture}
+                              alt={`${candidate.registerNumber}'s profile`}
+                              className="w-10 h-10 bg-slate-400 p-2.5 rounded-lg mr-4"
+                            />
+                          ) : (
+                            <div className="bg-slate-200 rounded-lg w-10 h-10 flex justify-center items-center mr-4">
+                              <DefaultProfile />
+                            </div>
+                          )}
                           <div className="flex flex-col justify-between items-start flex-grow">
                             <text className="poppins2 text-[15px] text-black">{`${candidate.registerNumber} - ${candidate.email}`}</text>
                             <text className="montserrat text-[14px] text-gray-500">
@@ -567,19 +629,22 @@ const Home = () => {
                               }`}
                             </text>
                           </div>
-                          {selectedCandidates.includes(candidate._id) && ( // Conditionally render the button
+                          {selectedCandidates.includes(candidate._id) && (
                             <Button
+                              href="#"
                               type="primary"
-                              shape="circle"
                               style={{
                                 backgroundColor: "#083344",
                                 borderColor: "#083344",
                                 color: "white",
-                                marginLeft: "auto", // Align button to the right
+                                marginLeft: "auto",
+                                borderRadius: "5px",
+                                height: "36px",
+                                padding: 0,
                               }}
                               onClick={(e) => {
-                                e.stopPropagation(); // Prevent click from triggering the list item click
-                                handleCandidateSelect(candidate._id); // Handle check action
+                                e.stopPropagation();
+                                handleCandidateSelect(candidate._id); // Use candidate._id correctly
                               }}
                             >
                               ✔
@@ -598,12 +663,7 @@ const Home = () => {
             <h1 className="text-[20px] poppins2 text-[#083344]">
               Create Question
             </h1>
-            <AddQuestion
-              questions={questions}
-              setQuestions={setQuestions}
-              inputTypes={inputTypes}
-              onAddQuestion={handleAddQuestion}
-            />
+            <AddQuestion questions={questions} setQuestions={setQuestions} />
           </div>
 
           {showDetails && (
@@ -615,49 +675,47 @@ const Home = () => {
                       Added Questions
                     </h1>
                     {questions.map((question, index) => (
-                      <>
-                        <div
-                          key={index}
-                          className="flex justify-between items-start w-[400px] border-b-[1.5px] pb-2 border-gray-100"
-                        >
-                          <h1 className="mt-3 poppins text-[14px] overflow-hidden w-[330px] text-[#000000]">
-                            {index + 1}.{question.questionText}
-                          </h1>
+                      <div
+                        key={index}
+                        className="flex justify-between items-start w-[400px] border-b-[1.5px] pb-2 border-gray-100"
+                      >
+                        <h1 className="mt-3 poppins text-[14px] overflow-hidden w-[330px] text-[#000000]">
+                          {index + 1}. {question.questionText}
+                        </h1>
 
-                          <div className="gap-0.5 flex">
+                        <div className="gap-0.5 flex">
+                          <IconButton
+                            edge="end"
+                            aria-label="view"
+                            onClick={() => handleViewQuestion(index)}
+                            className="w-[33px] h-[33px]"
+                          >
+                            <EyeIcon />
+                          </IconButton>
+                          <IconButton
+                            edge="end"
+                            aria-label="edit"
+                            onClick={() => handleEditQuestion(index)}
+                            className="w-[33px] h-[33px]"
+                          >
+                            <EditIcon />
+                          </IconButton>
+                          <Popconfirm
+                            title="Are you sure to delete this question?"
+                            onConfirm={() => handleConfirmDelete(index)}
+                            okText="Yes"
+                            cancelText="No"
+                          >
                             <IconButton
                               edge="end"
-                              aria-label="view"
-                              onClick={() => handleViewQuestion(index)}
+                              aria-label="delete"
                               className="w-[33px] h-[33px]"
                             >
-                              <ion-icon name="eye" />
+                              <TrashIcon />
                             </IconButton>
-                            <IconButton
-                              edge="end"
-                              aria-label="edit"
-                              onClick={() => handleEditQuestion(index)}
-                              className="w-[33px] h-[33px]"
-                            >
-                              <ion-icon name="create-outline" />
-                            </IconButton>
-                            <Popconfirm
-                              title="Are you sure to delete this question?"
-                              onConfirm={() => handleConfirmDelete(index)}
-                              okText="Yes"
-                              cancelText="No"
-                            >
-                              <IconButton
-                                edge="end"
-                                aria-label="delete"
-                                className="w-[33px] h-[33px]"
-                              >
-                                <ion-icon name="trash-outline" />
-                              </IconButton>
-                            </Popconfirm>
-                          </div>
+                          </Popconfirm>
                         </div>
-                      </>
+                      </div>
                     ))}
                   </List>
                 </>
@@ -806,7 +864,6 @@ const Home = () => {
                               onChange={(e) =>
                                 handleOptionChange(index, e.target.value)
                               }
-                              margin="normal"
                             />
                           ))}
 
