@@ -143,10 +143,14 @@ const Home = () => {
         phone: candidate.phone,
       }));
 
+    // Convert startDate and endDate to UTC before sending to backend
+    const utcStartDate = new Date(startDate).toISOString();
+    const utcEndDate = new Date(endDate).toISOString();
+
     const testData = {
       testName,
-      startDate,
-      endDate,
+      startDate: utcStartDate,
+      endDate: utcEndDate,
       authOption,
       password: authOption === "custom" ? password : "",
       questions: questions.map((q) => ({
@@ -311,19 +315,13 @@ const Home = () => {
   };
 
   const handleStartDateChange = (e) => {
-    const localDate = new Date(e.target.value);
-    const utcDate = new Date(
-      localDate.getTime() - localDate.getTimezoneOffset() * 60000
-    ).toISOString();
-    setStartDate(utcDate);
+    const localDate = e.target.value;
+    setStartDate(localDate); // Store local date for display in the input
   };
 
   const handleEndDateChange = (e) => {
-    const localDate = new Date(e.target.value);
-    const utcDate = new Date(
-      localDate.getTime() - localDate.getTimezoneOffset() * 60000
-    ).toISOString();
-    setEndDate(utcDate);
+    const localDate = e.target.value;
+    setEndDate(localDate); // Store local date for display in the input
   };
 
   // Filtering candidates based on search query
