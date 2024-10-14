@@ -90,7 +90,7 @@ const EditTest = () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        "https://taskup-backend.vercel.app/api/testCandidates"
+        "https://taskup-backend.vercel.app /api/testCandidates"
       );
       setCandidates(response.data);
       console.log(response.data);
@@ -134,7 +134,7 @@ const EditTest = () => {
     const fetchTestDetails = async () => {
       try {
         const response = await axios.get(
-          `https://taskup-backend.vercel.app/api/tests/${testId}`
+          `https://taskup-backend.vercel.app /api/tests/${testId}`
         );
         const test = response.data;
 
@@ -245,7 +245,7 @@ const EditTest = () => {
 
     try {
       await axios.put(
-        `https://taskup-backend.vercel.app/api/tests/${testId}`,
+        `https://taskup-backend.vercel.app /api/tests/${testId}`,
         updatedTestData
       );
       showToast("Test updated successfully!");

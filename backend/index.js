@@ -1,26 +1,16 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const multer = require("multer");
-const serviceAccount = require("./path/to/your-serviceAccountKey.json");
-const admin = require("firebase-admin");
 const path = require("path");
 const cors = require("cors");
 const TestSubmission = require("./Module/TestSubmission.js");
-const candidatesCollection = db.collection("candidates");
+const CreateCandidate = require("./Module/CreateCandidate.js");
 const app = express();
 require("dotenv").config();
 const allowedOrigins = [
   "https://taskup-brix.vercel.app", // Deployed frontend
   "http://localhost:3000", // Local development
 ];
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
-
-const db = admin.firestore();
-const firebaseStorage = admin.storage();
-const bucket = firebaseStorage.bucket();
 
 app.use(
   cors({
@@ -37,6 +27,7 @@ app.use(
 );
 
 app.use(express.json());
+
 app.use("/uploads", express.static("uploads"));
 
 mongoose
@@ -100,44 +91,30 @@ app.post(
   async (req, res) => {
     try {
       const { registerNumber, dob, email, phone } = req.body;
-      const profilePicture = req.file ? req.file.path : null;
+      const profilePicture = req.file ? req.file.filename : null;
 
       // Check if register number exists
-      const existingCandidateSnapshot = await candidatesCollection
-        .where("registerNumber", "==", registerNumber)
-        .get();
+      const existingCandidate = await CreateCandidate.findOne({
+        registerNumber,
+      });
 
-      if (!existingCandidateSnapshot.empty) {
+      if (existingCandidate) {
         return res
           .status(400)
           .json({ message: "Register number already exists" });
       }
 
-      // If there is a profile picture, upload it to Firebase Storage
-      let profilePictureUrl = null;
-      if (profilePicture) {
-        const fileName = Date.now() + path.extname(req.file.originalname);
-        const fileUpload = admin.storage().bucket().file(fileName);
-        await fileUpload.save(req.file.buffer, {
-          contentType: req.file.mimetype,
-          public: true,
-        });
-        profilePictureUrl = `https://storage.googleapis.com/${
-          admin.storage().bucket().name
-        }/${fileName}`;
-      }
-
-      // Save candidate data to Firestore
-      const newCandidate = {
+      // Save the candidate data to MongoDB
+      const newCandidate = new CreateCandidate({
         registerNumber,
         dob,
         email,
         phone,
-        profilePicture: profilePictureUrl, // Save the URL from Firebase Storage
-      };
+        profilePicture, // Save the file name in the database
+      });
 
-      await candidatesCollection.add(newCandidate);
-      res.status(201).json({ message: "Candidate registered successfully!" });
+      await newCandidate.save();
+      res.status(201).json({ message: "candidate registered successfully!" });
     } catch (error) {
       console.error("Error registering candidate:", error);
       res.status(500).json({ message: "Error registering candidate." });
@@ -154,7 +131,6 @@ app.put(
       const { id } = req.params;
       const { registerNumber, dob, email, phone } = req.body;
 
-      // Prepare the updated candidate data
       const updatedFields = {
         registerNumber,
         dob,
@@ -162,27 +138,23 @@ app.put(
         phone,
       };
 
-      let profilePictureUrl = null;
-
-      // If a new profile picture is uploaded, upload it to Firebase Storage
+      // Update profile picture only if a new one is uploaded
       if (req.file) {
-        const fileName = Date.now() + path.extname(req.file.originalname);
-        const fileUpload = admin.storage().bucket().file(fileName);
-        await fileUpload.save(req.file.buffer, {
-          contentType: req.file.mimetype,
-          public: true,
-        });
-        profilePictureUrl = `https://storage.googleapis.com/${
-          admin.storage().bucket().name
-        }/${fileName}`;
-        updatedFields.profilePicture = profilePictureUrl;
+        updatedFields.profilePicture = req.file.filename;
       }
 
-      // Update candidate in Firestore
-      const candidateDoc = db.collection("candidates").doc(id);
-      await candidateDoc.update(updatedFields);
+      // Update the candidate record in the database
+      const updatedcandidate = await CreateCandidate.findByIdAndUpdate(
+        id,
+        updatedFields,
+        { new: true }
+      );
 
-      res.send("Candidate updated successfully");
+      if (!updatedcandidate) {
+        return res.status(404).send("candidate not found");
+      }
+
+      res.send("candidate updated successfully");
     } catch (error) {
       console.error("Error updating candidate: ", error);
       res.status(500).send("Error updating candidate");
@@ -193,11 +165,7 @@ app.put(
 // Get all candidates
 app.get("/api/testCandidates", async (req, res) => {
   try {
-    const snapshot = await candidatesCollection.get();
-    const candidates = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const candidates = await CreateCandidate.find();
     res.json(candidates);
   } catch (error) {
     res.status(500).json({ message: "Error fetching candidates." });
@@ -208,11 +176,13 @@ app.get("/api/testCandidates", async (req, res) => {
 app.delete("/api/testCandidates/:id", async (req, res) => {
   try {
     const { id } = req.params;
+    const deletedcandidate = await CreateCandidate.findByIdAndDelete(id);
 
-    // Delete the candidate from Firestore
-    await db.collection("candidates").doc(id).delete();
+    if (!deletedcandidate) {
+      return res.status(404).send("candidate not found");
+    }
 
-    res.send("Candidate deleted successfully");
+    res.send("candidate deleted successfully");
   } catch (error) {
     res.status(500).send("Error deleting candidate");
   }
@@ -439,6 +409,8 @@ app.delete("/api/tests/:testId", async (req, res) => {
     res.status(500).json({ message: "Server error while deleting the test." });
   }
 });
+
+// Assuming you already have the necessary imports and initial setup
 
 // PUT route to update a specific question
 app.put("/api/tests/:testId/questions/:questionId", async (req, res) => {

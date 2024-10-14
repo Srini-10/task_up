@@ -351,7 +351,7 @@ const QuestionComponent: React.FC = () => {
 
         // Submit answers and get the score
         const submissionResponse = await axios.post(
-          `https://taskup-backend.vercel.app/api/tests/${testId}/submit`,
+          `https://taskup-backend.vercel.app /api/tests/${testId}/submit`,
           {
             email,
             registerNumber,
@@ -380,7 +380,7 @@ const QuestionComponent: React.FC = () => {
 
         // Save the submission
         await axios.post(
-          `https://taskup-backend.vercel.app/api/tests/${testId}/save-submission`,
+          `https://taskup-backend.vercel.app /api/tests/${testId}/save-submission`,
           saveSubmissionPayload
         );
 
@@ -438,7 +438,7 @@ const QuestionComponent: React.FC = () => {
     const fetchTestData = async () => {
       try {
         const response = await axios.get(
-          `https://taskup-backend.vercel.app/api/tests/${testId}`
+          `https://taskup-backend.vercel.app /api/tests/${testId}`
         );
         const test = response.data;
 
@@ -472,7 +472,7 @@ const QuestionComponent: React.FC = () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        `https://taskup-backend.vercel.app/api/tests/${testId}/questions`
+        `https://taskup-backend.vercel.app /api/tests/${testId}/questions`
       );
       setQuestions(response.data);
     } catch (error) {
@@ -554,7 +554,7 @@ const QuestionComponent: React.FC = () => {
   const checkTestSubmission = async (email: string, registerNumber: string) => {
     try {
       const response = await axios.post(
-        `https://taskup-backend.vercel.app/api/tests/${testId}/check-submission`,
+        `https://taskup-backend.vercel.app /api/tests/${testId}/check-submission`,
         { email, registerNumber }
       );
 
@@ -595,7 +595,7 @@ const QuestionComponent: React.FC = () => {
       setLoading(true);
       try {
         const response = await axios.get(
-          `https://taskup-backend.vercel.app/api/tests/${testId}`
+          `https://taskup-backend.vercel.app /api/tests/${testId}`
         );
         setTestName(response.data.testName);
       } catch (error) {
@@ -615,7 +615,7 @@ const QuestionComponent: React.FC = () => {
 
     try {
       const response = await axios.post(
-        `https://taskup-backend.vercel.app/api/tests/${testId}/authenticate`,
+        `https://taskup-backend.vercel.app /api/tests/${testId}/authenticate`,
         { registerNumber, dob, email, phone }
       );
 

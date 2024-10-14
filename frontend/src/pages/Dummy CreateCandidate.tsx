@@ -67,7 +67,7 @@ const CreateCandidates = () => {
 
     try {
       await axios.post(
-        "https://taskup-backend.vercel.app/api/testCandidates",
+        "https://taskup-backend.vercel.app /api/testCandidates",
         formData,
         {
           headers: {
@@ -102,7 +102,7 @@ const CreateCandidates = () => {
   const handleDelete = async (candidateId) => {
     try {
       await axios.delete(
-        `https://taskup-backend.vercel.app/api/testCandidates/${candidateId}`
+        `https://taskup-backend.vercel.app /api/testCandidates/${candidateId}`
       );
       showToast("candidate deleted successfully!");
       fetchCandidates();
@@ -120,7 +120,7 @@ const CreateCandidates = () => {
       phone: candidate.phone,
     });
     setProfilePreview(
-      `https://taskup-backend.vercel.app/uploads/${candidate.profilePicture}`
+      `https://taskup-backend.vercel.app /uploads/${candidate.profilePicture}`
     );
     setEditCandidateId(candidate._id);
     setIsModalVisible(true);
@@ -140,7 +140,7 @@ const CreateCandidates = () => {
 
     try {
       await axios.put(
-        `https://taskup-backend.vercel.app/api/testCandidates/${editCandidateId}`,
+        `https://taskup-backend.vercel.app /api/testCandidates/${editCandidateId}`,
         formData,
         {
           headers: {
@@ -220,7 +220,7 @@ const CreateCandidates = () => {
                       </h1>
                       {candidate.profilePicture && (
                         <img
-                          src={`https://taskup-backend.vercel.app/uploads/${candidate.profilePicture}`}
+                          src={`https://taskup-backend.vercel.app /uploads/${candidate.profilePicture}`}
                           alt="Profile"
                           width="100"
                         />

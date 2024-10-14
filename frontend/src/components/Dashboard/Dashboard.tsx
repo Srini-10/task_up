@@ -58,14 +58,14 @@ const Dashboard: React.FC = () => {
       setLoading(true);
       try {
         const response = await axios.get(
-          "https://taskup-backend.vercel.app/api/tests"
+          "https://taskup-backend.vercel.app /api/tests"
         );
         const testsData: Test[] = response.data;
 
         const testsWithSubmissionsCount = await Promise.all(
           testsData.map(async (test) => {
             const submissionsResponse = await axios.get(
-              `https://taskup-backend.vercel.app/api/tests/${test._id}/submissions-count`
+              `https://taskup-backend.vercel.app /api/tests/${test._id}/submissions-count`
             );
             return {
               ...test,
@@ -89,7 +89,7 @@ const Dashboard: React.FC = () => {
   const fetchRankings = async (testId: string) => {
     try {
       const response = await axios.get(
-        `https://taskup-backend.vercel.app/api/tests/${testId}/ranking`
+        `https://taskup-backend.vercel.app /api/tests/${testId}/ranking`
       );
       const rankingData: Ranking[] = response.data;
 
