@@ -5,6 +5,7 @@ const path = require("path");
 const cors = require("cors");
 const TestSubmission = require("./Module/TestSubmission.js");
 const CreateCandidate = require("./Module/CreateCandidate.js");
+const cloudinary = require("./cloudinaryConfig.js");
 const app = express();
 require("dotenv").config();
 const allowedOrigins = [
@@ -41,12 +42,16 @@ mongoose
 // Set up multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/"); // Set the upload destination folder
+    console.log("Uploading file to:", "uploads/"); // Log this
+    cb(null, "uploads/");
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname)); // Set a unique filename with timestamp
+    const uniqueFilename = Date.now() + path.extname(file.originalname);
+    console.log("Saving file as:", uniqueFilename); // Log this
+    cb(null, uniqueFilename);
   },
 });
+
 const upload = multer({ storage: storage });
 
 const QuestionSchema = new mongoose.Schema({
@@ -83,6 +88,36 @@ const TestSchema = new mongoose.Schema({
 });
 
 const Test = mongoose.model("Test", TestSchema);
+
+// Route for handling profile picture upload
+app.post(
+  "/uploadProfilePicture",
+  upload.single("profilePicture"),
+  async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).send("No file uploaded.");
+      }
+
+      const result = await cloudinary.uploader.upload_stream(
+        { folder: "profile_pictures" }, // Optional: specify a folder in Cloudinary
+        (error, result) => {
+          if (error) {
+            return res.status(500).send("Error uploading to Cloudinary");
+          }
+
+          // Send the Cloudinary URL back
+          res.status(200).send({ url: result.secure_url });
+        }
+      );
+
+      file.stream.pipe(result); // Upload file to Cloudinary
+    } catch (error) {
+      res.status(500).send("Error uploading image");
+    }
+  }
+);
 
 // POST route to register a new candidate
 app.post(

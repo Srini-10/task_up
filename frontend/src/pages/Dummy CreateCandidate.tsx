@@ -67,7 +67,7 @@ const CreateCandidates = () => {
 
     try {
       await axios.post(
-        "https://taskup-backend.vercel.app /api/testCandidates",
+        "https://taskup-backend.vercel.app/api/testCandidates",
         formData,
         {
           headers: {
@@ -220,7 +220,7 @@ const CreateCandidates = () => {
                       </h1>
                       {candidate.profilePicture && (
                         <img
-                          src={`https://taskup-backend.vercel.app /uploads/${candidate.profilePicture}`}
+                          src={`https://taskup-backend.vercel.app/uploads/${candidate.profilePicture}`}
                           alt="Profile"
                           width="100"
                         />
