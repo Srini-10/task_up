@@ -14,8 +14,6 @@ root.render(
     <NextUIProvider>
       <BrowserRouter>
         <App />
-        {"Home"}
-        <Home />
         <ToastContainer
           position="top-right"
           autoClose={5000}
