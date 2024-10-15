@@ -240,9 +240,7 @@ const Home = () => {
 
     // Find the selected candidates by matching _id with selectedCandidates array
     const selectedCandidateData = candidates
-      .filter((candidate: any) =>
-        selectedCandidates.includes(candidate._id as never)
-      )
+      .filter((candidate: any) => selectedCandidates.includes(candidate._id))
       .map((candidate: any) => ({
         registerNumber: candidate.registerNumber,
         dob: candidate.dob,
@@ -250,6 +248,8 @@ const Home = () => {
         phone: candidate.phone,
       }));
 
+    console.log("Candidates", selectedCandidateData);
+    console.log("CandidatesID", selectedCandidates);
     // Convert startDate and endDate to UTC before sending to backend
     const utcStartDate = new Date(startDate).toISOString();
     const utcEndDate = new Date(endDate).toISOString();
@@ -425,7 +425,6 @@ const Home = () => {
       );
     }
   );
-
   return (
     <>
       <div className="flex justify-between">

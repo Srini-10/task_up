@@ -134,7 +134,7 @@ export default function CreateCandidates() {
       };
 
       const response = await fetch(
-        "https://taskup-backend.vercel.app/api/testCandidates", // Adjust the endpoint if necessary
+        "https://taskup-backend.vercel.app/api/testCandidates",
         {
           method: "POST",
           headers: {
@@ -145,7 +145,7 @@ export default function CreateCandidates() {
       );
       if (response.ok) {
         const addedCandidate = await response.json();
-        setCandidates([...candidates, addedCandidate]); // Update the local state with the newly added candidate
+        setCandidates([...candidates, addedCandidate]);
       } else {
         console.error("Error adding new candidate:", response.statusText);
       }

@@ -1,15 +1,13 @@
 import React from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, useMatch } from "react-router-dom";
 import AppRouter from "./routes/Router.tsx";
 import Sidebar from "./components/Sidebar.tsx";
 import Navbar from "./components/Navbar.tsx";
 import QuestionComponent from "./components/Questions.tsx";
 
 function App() {
-  const location = useLocation();
-
   // Check if the current path matches "/tests/:testId"
-  const isTestPage = location.pathname.startsWith("/tests/:testId");
+  const isTestPage = useMatch("/tests/:testId");
 
   return (
     <>
