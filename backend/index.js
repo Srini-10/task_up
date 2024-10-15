@@ -240,21 +240,20 @@ app.post("/api/tests", async (req, res) => {
     console.log("Received questions:", questions);
 
     // Validate and format candidate data if it exists
-    if (formattedCandidates.length === 0) {
-      throw new Error("No candidates selected.");
-    }
-
-    // Additional validation if required
-    formattedCandidates.forEach((candidate) => {
-      if (
-        !candidate.registerNumber ||
-        !candidate.dob ||
-        !candidate.email ||
-        !candidate.phone
-      ) {
-        throw new Error("Missing candidate information.");
-      }
-    });
+    const formattedCandidates = candidates
+      .filter(
+        (candidate) =>
+          candidate.registerNumber &&
+          candidate.dob &&
+          candidate.email &&
+          candidate.phone
+      )
+      .map((candidate) => ({
+        registerNumber: candidate.registerNumber,
+        dob: candidate.dob,
+        email: candidate.email,
+        phone: candidate.phone,
+      }));
 
     // Validate that each question has correctAnswerIndices, or set default to an empty array
     const validatedQuestions = questions.map((q) => ({

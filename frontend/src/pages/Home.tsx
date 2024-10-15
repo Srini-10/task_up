@@ -242,10 +242,10 @@ const Home = () => {
     const selectedCandidateData = candidates
       .filter((candidate: any) => selectedCandidates.includes(candidate._id))
       .map((candidate: any) => ({
-        registerNumber: candidate.registerNumber,
-        dob: candidate.dob,
-        email: candidate.email,
-        phone: candidate.phone,
+        registerNumber: candidate.registerNumber || "",
+        dob: candidate.dob || "",
+        email: candidate.email || "",
+        phone: candidate.phone || "",
       }));
 
     console.log("Candidates", selectedCandidateData);
@@ -265,7 +265,7 @@ const Home = () => {
         inputType: q.inputType,
         options: q.options,
         correctAnswerIndices:
-          q.correctAnswerIndices.length > 0 ? q.correctAnswerIndices : null,
+          q.correctAnswerIndices.length > 0 ? q.correctAnswerIndices : [],
       })),
       candidates: selectedCandidateData,
       malpractice: false,
@@ -280,6 +280,7 @@ const Home = () => {
       showToast("Test created successfully!");
       resetForm();
     } catch (error) {
+      console.error("Error while creating test:", error);
       showToast("An error occurred while creating the test.");
     } finally {
       setLoading(false);
