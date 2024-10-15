@@ -759,14 +759,30 @@ app.put("/api/tests/:testId", async (req, res) => {
     endDate,
     authOption,
     password,
-    questions,
-    candidates,
+    questions = [],
+    candidates = [],
     malpractice,
   } = req.body;
 
   try {
     // Log the received questions for debugging
     console.log("Received questions data:", questions);
+
+    // Validate and format candidate data if it exists
+    const formattedCandidates = candidates
+      .filter(
+        (candidate) =>
+          candidate.registerNumber &&
+          candidate.dob &&
+          candidate.email &&
+          candidate.phone
+      )
+      .map((candidate) => ({
+        registerNumber: candidate.registerNumber,
+        dob: candidate.dob,
+        email: candidate.email,
+        phone: candidate.phone,
+      }));
 
     // Validate and process the questions
     const validatedQuestions = questions.map((q, index) => {
@@ -785,8 +801,8 @@ app.put("/api/tests/:testId", async (req, res) => {
       endDate,
       authOption,
       password: authOption === "custom" ? password : null,
-      questions: validatedQuestions, // Use validated questions here
-      candidates,
+      questions: validatedQuestions,
+      candidates: formattedCandidates,
       malpractice, // Store as boolean
     };
 

@@ -277,12 +277,12 @@ const EditTest = () => {
 
   const handleStartDateChange = (e) => {
     const localDate = e.target.value;
-    setStartDate(localDate); // Store local date for display in the input
+    setStartDate(localDate);
   };
 
   const handleEndDateChange = (e) => {
     const localDate = e.target.value;
-    setEndDate(localDate); // Store local date for display in the input
+    setEndDate(localDate);
   };
 
   const handleEditQuestion = (index) => {
