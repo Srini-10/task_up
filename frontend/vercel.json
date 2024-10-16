@@ -11,8 +11,15 @@
   ],
   "routes": [
     {
-      "src": "/*",
-      "dest": "/"
+      "src": "/api/(.*)",
+      "dest": "https://taskup-backend.vercel.app/api/$1"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ],
   "env": {
