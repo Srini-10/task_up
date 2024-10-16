@@ -8,7 +8,7 @@ const AddQuestion = ({ questions, setQuestions }) => {
   const [questionText, setQuestionText] = useState("");
   const [questionType, setQuestionType] = useState(""); // State for question type
   const [options, setOptions] = useState(["", "", "", ""]); // Start with 4 empty options
-  const [correctAnswers, setCorrectAnswers] = useState([]); // Array to store correct answer indices
+  const [correctAnswers, setCorrectAnswers] = useState<string[]>([]); // Initial state is an empty array of strings
 
   // Available question types
   const questionTypes = ["Multiple Choice", "Select", "Radio", "Text Input"];

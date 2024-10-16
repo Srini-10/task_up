@@ -4,6 +4,9 @@ import axios from "axios";
 import { Button, Alert } from "@mui/material";
 import { Popconfirm, Spin } from "antd";
 import { showToast } from "../toastUtil";
+import Trash from "../assets/trash_outline.svg";
+import Copy from "../assets/copy_outline.svg";
+import Edit from "../assets/create_outline.svg";
 
 interface Test {
   _id: string;
@@ -118,7 +121,7 @@ const TestContainer: React.FC = () => {
                   onClick={() => handleCopyToClipboard(test._id)}
                   className="-mt-3.5 -mr-3.5 hover:bg-gray-200 w-6 h-6 pl-[4px] pt-[2px] rounded cursor-pointer"
                 >
-                  <ion-icon name="copy-outline"></ion-icon>
+                  <img src={Copy} alt="" />
                 </div>
               </div>
 
@@ -145,7 +148,7 @@ const TestContainer: React.FC = () => {
                       navigate(`/tests/edit/${test._id}`);
                     }}
                   >
-                    <ion-icon name="create-outline" />
+                    <img src={Edit} alt="" />
                   </Button>
                   <Popconfirm
                     title="Are you sure to delete this question?"
@@ -154,7 +157,7 @@ const TestContainer: React.FC = () => {
                     cancelText="No"
                   >
                     <Button variant="contained" color="error">
-                      <ion-icon name="trash-outline" />
+                      <img src={Trash} alt="" />
                     </Button>
                   </Popconfirm>
                 </div>

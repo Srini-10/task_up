@@ -301,7 +301,7 @@ export default function CreateCandidates() {
         return (
           <img
             src={candidate.profilePicture}
-            alt={`${candidate.name} Profile`}
+            alt={"Profile"}
             width={100}
             height={100}
           />
@@ -323,7 +323,7 @@ export default function CreateCandidates() {
         />
         <Button
           className="bg-foreground text-background"
-          endContent={<PlusIcon />}
+          endContent={<PlusIcon width={undefined} height={undefined} />}
           size="sm"
           onClick={() => setAddVisible(true)}
         >
@@ -331,10 +331,7 @@ export default function CreateCandidates() {
         </Button>
       </div>
 
-      <Table
-        aria-label="Candidates Table"
-        css={{ height: "auto", width: "100%" }}
-      >
+      <Table aria-label="Candidates Table">
         <TableHeader>
           <TableColumn>Profile</TableColumn>
           <TableColumn>Register Number</TableColumn>
@@ -349,7 +346,7 @@ export default function CreateCandidates() {
               <TableCell>
                 <img
                   src={candidate.profilePicture}
-                  alt={`${candidate.name} Profile`}
+                  alt={"Profile"}
                   width={100}
                   height={100}
                 />

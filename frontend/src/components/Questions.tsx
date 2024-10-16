@@ -75,7 +75,7 @@ const QuestionComponent: React.FC = () => {
   const [leftWidth, setLeftWidth] = useState(64);
   const isResizing = useRef(false);
   const navigate = useNavigate();
-  const requestRef = useRef<HTMLCanvasElement | null>(null);
+  const requestRef = useRef<number | null>(null);
   const [noteText, setNoteText] = useState("");
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const ctxRef = useRef<any>(null);
@@ -894,9 +894,10 @@ const QuestionComponent: React.FC = () => {
 
   // Function to trigger form submission from external button
   const triggerFormSubmit = () => {
-    handleSubmit({
-      preventDefault: () => {},
-    });
+    const form = document.querySelector("form"); // Find your form element
+    if (form) {
+      form.submit(); // Submit the form directly
+    }
   };
 
   useEffect(() => {
@@ -1532,8 +1533,11 @@ const QuestionComponent: React.FC = () => {
                                             <FormControlLabel
                                               key={index}
                                               value={index} // Use index as numeric value
-                                              control={<BpRadio />}
-                                              icon={<BpIcon />}
+                                              control={
+                                                <BpRadio
+                                                  icon={<BpIcon />} // Pass the custom icon to the radio button
+                                                />
+                                              }
                                               label={option}
                                             />
                                           )
@@ -1600,7 +1604,10 @@ const QuestionComponent: React.FC = () => {
                                 onClick={handlePrevious}
                                 disabled={selectedIndexes[0] === 0}
                               >
-                                <ArrowBackIosNewIcon fontSize="15px" /> Prev
+                                <ArrowBackIosNewIcon
+                                  style={{ fontSize: "15px" }}
+                                />
+                                Prev
                               </button>
 
                               <button
@@ -1610,7 +1617,10 @@ const QuestionComponent: React.FC = () => {
                                   selectedIndexes[0] === questions.length - 1
                                 }
                               >
-                                Next <ArrowForwardIosIcon fontSize="15px" />
+                                Next{" "}
+                                <ArrowForwardIosIcon
+                                  style={{ fontSize: "15px" }}
+                                />
                               </button>
                             </Box>
                           </div>

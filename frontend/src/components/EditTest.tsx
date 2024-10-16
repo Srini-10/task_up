@@ -12,6 +12,9 @@ import axios from "axios";
 import { useParams } from "react-router-dom";
 import SearchIcon from "../assets/Search_Icon.svg";
 import DefaultProfile from "../assets/User_Profile.svg";
+import Trash from "../assets/trash_outline.svg";
+import View from "../assets/view_outline.svg";
+import Edit from "../assets/create_outline.svg";
 import { showToast } from "../toastUtil.js";
 import { Form, Input, Modal, Select, Popconfirm, Spin } from "antd";
 
@@ -32,6 +35,14 @@ type Question = {
   options: string[];
   correctAnswers: any[];
 };
+
+// type EditingQuestion = {
+//   options: string[];
+//   questionText?: string;
+//   correctAnswers: string[];
+//   inputType?: string;
+// };
+
 const EditTest = () => {
   const { testId } = useParams();
   const [viewQuestionIndex, setViewQuestionIndex] = useState(null);
@@ -43,11 +54,12 @@ const EditTest = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [password, setPassword] = useState("");
-  const [questions, setQuestions] = useState([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [candidates, setCandidates] = useState([]);
   const [showDetails, setShowDetails] = useState(true);
   const [editQuestionIndex, setEditQuestionIndex] = useState(null);
-  const [editingQuestion, setEditingQuestion] = useState(null);
+  const [editingQuestion, setEditingQuestion] =
+    useState<EditingQuestion | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectAll, setSelectAll] = useState(false);
@@ -348,35 +360,64 @@ const EditTest = () => {
     });
   };
 
-  const handleCorrectAnswerSelect = (selectedIndices) => {
-    // Ensure correctAnswers is an array
+  type EditingQuestion = {
+    options: string[]; // Ensure options is always a string array
+    questionText?: string;
+    correctAnswers: string[]; // correctAnswers should always be a string array
+  };
+
+  const handleCorrectAnswerSelect = (selectedIndices: number[] | number) => {
+    setEditingQuestion((prev) => {
+      if (!prev) {
+        // If the previous state is null, initialize it with default values
+        return {
+          options: [], // Ensure options is an empty array initially
+          correctAnswers: Array.isArray(selectedIndices)
+            ? selectedIndices.map(String) // Convert numbers to strings
+            : [String(selectedIndices)], // Convert single number to string
+        };
+      }
+
+      const newCorrectAnswers = Array.isArray(selectedIndices)
+        ? selectedIndices.map(String) // Convert all numbers to strings
+        : [String(selectedIndices)]; // Convert single number to string
+
+      return {
+        ...prev,
+        correctAnswers: newCorrectAnswers, // Update correctAnswers
+      };
+    });
+  };
+
+  const handleQuestionTextChange = (text: string) => {
     setEditingQuestion((prev) => ({
       ...prev,
-      correctAnswers: Array.isArray(selectedIndices)
-        ? selectedIndices
-        : [selectedIndices],
+      questionText: text,
+      correctAnswers: prev?.correctAnswers || [], // Ensure correctAnswers is always an array
+      options: prev?.options || [], // Ensure options is always an array (even if it's not defined)
     }));
   };
 
-  const handleQuestionTextChange = (text) => {
-    setEditingQuestion((prev) => ({ ...prev, questionText: text }));
-  };
-
-  const handleInputTypeChange = (newInputType) => {
+  const handleInputTypeChange = (newInputType: any) => {
     setEditingQuestion((prev) => ({
       ...prev,
       inputType: newInputType,
-      correctAnswers: [],
+      correctAnswers: [], // Ensure correctAnswers is always an array
+      options: prev?.options || [], // Ensure options is always an array
     }));
   };
 
-  const handleOptionChange = (index, value) => {
+  const handleOptionChange = (index: number, value: string) => {
     setEditingQuestion((prev) => {
-      //@ts-ignore
-      const newOptions = [...prev.options];
+      // Ensure options and correctAnswers are arrays, even if undefined
+      const newOptions = [...(prev?.options || [])];
       newOptions[index] = value;
-      //@ts-ignore
-      return { ...prev, options: newOptions };
+
+      return {
+        ...prev,
+        options: newOptions,
+        correctAnswers: prev?.correctAnswers || [], // Ensure correctAnswers is always an array
+      };
     });
   };
 
@@ -430,7 +471,7 @@ const EditTest = () => {
                       onClick={() => handleViewQuestion(index)}
                       className="w-[33px] h-[33px]"
                     >
-                      <ion-icon name="eye" />
+                      <img src={View} alt="" />
                     </IconButton>
                     <IconButton
                       edge="end"
@@ -438,7 +479,7 @@ const EditTest = () => {
                       onClick={() => handleEditQuestion(index)}
                       className="w-[33px] h-[33px]"
                     >
-                      <ion-icon name="create-outline" />
+                      <img src={Edit} alt="" />
                     </IconButton>
                     <Popconfirm
                       title="Are you sure to delete this question?"
@@ -451,7 +492,7 @@ const EditTest = () => {
                         aria-label="delete"
                         className="w-[33px] h-[33px]"
                       >
-                        <ion-icon name="trash-outline" />
+                        <img src={Trash} alt="" />
                       </IconButton>
                     </Popconfirm>
                   </div>
@@ -873,8 +914,9 @@ const EditTest = () => {
                               </div>
                               {selectedCandidates.includes(candidate._id) && ( // Conditionally render the button
                                 <Button
+                                  component="a"
+                                  href="#"
                                   type="primary"
-                                  shape="circle"
                                   style={{
                                     backgroundColor: "#083344",
                                     borderColor: "#083344",

@@ -8,7 +8,6 @@ import {
   TableRow,
   TableCell,
   Box,
-  Tab,
 } from "@mui/material";
 import { Spin } from "antd";
 import axios from "axios";
@@ -73,14 +72,14 @@ const Dashboard: React.FC = () => {
 
     // Add table rows to the data array
     rankings.forEach((ranking, index) => {
-      const row = [
-        index + 1,
+      const row: string[] = [
+        (index + 1).toString(), // Convert index + 1 to string
         ranking.registerNumber,
         ranking.email,
         `${formatDateTime(ranking.submissionTime.toString()).date} ${
           formatDateTime(ranking.submissionTime.toString()).time
         }`,
-        ranking.marks,
+        ranking.marks.toString(), // Convert marks to string
         ranking.malpractice === "true" ? "Malpractice" : "Genuine",
       ];
 
@@ -89,7 +88,7 @@ const Dashboard: React.FC = () => {
         const answer = ranking.answers.find(
           (a) => a.questionText === questionText
         );
-        row.push(answer ? answer.selectedAnswer : "N/A");
+        row.push(answer ? String(answer.selectedAnswer) : "N/A"); // Ensure the answer is a string
       });
 
       data.push(row);
