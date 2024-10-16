@@ -86,7 +86,7 @@ const QuestionComponent: React.FC = () => {
   const [offsetX] = useState(0);
   const [offsetY] = useState(0);
 
-  console.log(malpractice, score, totalQuestions);
+  console.log(malpractice, score, totalQuestions, tabSwitchCount);
   // Load bookmark state from sessionStorage when the component mounts
   useEffect(() => {
     const storedBookmarkState = sessionStorage.getItem("isBookmarked");
