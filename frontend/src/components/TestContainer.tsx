@@ -119,9 +119,9 @@ const TestContainer: React.FC = () => {
                 </h3>
                 <div
                   onClick={() => handleCopyToClipboard(test._id)}
-                  className="-mt-3.5 -mr-3.5 hover:bg-gray-200 w-6 h-6 pl-[4px] pt-[2px] rounded cursor-pointer"
+                  className="-mt-3.5 -mr-3.5 hover:bg-gray-200 w-6 h-6 flex justify-center items-center rounded cursor-pointer"
                 >
-                  <img src={Copy} alt="" />
+                  <img className="w-[17px] h-[17px]" src={Copy} alt="" />
                 </div>
               </div>
 
@@ -148,7 +148,7 @@ const TestContainer: React.FC = () => {
                       navigate(`/tests/edit/${test._id}`);
                     }}
                   >
-                    <img src={Edit} alt="" />
+                    <img className="w-[17px] h-[17px]" src={Edit} alt="" />
                   </Button>
                   <Popconfirm
                     title="Are you sure to delete this question?"
@@ -157,7 +157,7 @@ const TestContainer: React.FC = () => {
                     cancelText="No"
                   >
                     <Button variant="contained" color="error">
-                      <img src={Trash} alt="" />
+                      <img className="w-[17px] h-[17px]" src={Trash} alt="" />
                     </Button>
                   </Popconfirm>
                 </div>

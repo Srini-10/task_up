@@ -426,23 +426,6 @@ const QuestionComponent: React.FC = () => {
     ]
   );
 
-  // Effect to check tab switch count and auto-submit test if needed
-  useEffect(() => {
-    if (tabSwitchCount > 3 && !isTestSubmitted) {
-      setMalpractice(true);
-      console.log("Auto-submitting due to excessive tab switches");
-      handleSubmit(null, true);
-    }
-  }, [tabSwitchCount, handleSubmit, isTestSubmitted, setMalpractice]);
-
-  // Effect to check remaining time and submit test automatically
-  useEffect(() => {
-    if (remainingTime !== null && remainingTime <= 0 && !isTestSubmitted) {
-      console.log("Auto-submitting due to time expiration");
-      handleSubmit(null, true);
-    }
-  }, [remainingTime, handleSubmit, isTestSubmitted]);
-
   useEffect(() => {
     const fetchTestData = async () => {
       try {
@@ -894,10 +877,7 @@ const QuestionComponent: React.FC = () => {
 
   // Function to trigger form submission from external button
   const triggerFormSubmit = () => {
-    const form = document.querySelector("form"); // Find your form element
-    if (form) {
-      form.submit(); // Submit the form directly
-    }
+    handleSubmit();
   };
 
   useEffect(() => {
@@ -908,22 +888,12 @@ const QuestionComponent: React.FC = () => {
       return message; // Some older browsers
     };
 
-    // Disable Escape key
-    const handleEscapeKey = (e) => {
-      if (e.key === "Escape") {
-        e.preventDefault(); // Prevent the default action of the Escape key
-        console.log("Escape key is disabled.");
-      }
-    };
-
     // Add event listeners
     window.addEventListener("beforeunload", handleBeforeUnload);
-    window.addEventListener("keydown", handleEscapeKey, true);
 
     // Cleanup event listeners on component unmount
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      window.removeEventListener("keydown", handleEscapeKey, true);
     };
   }, []);
 
