@@ -1,8 +1,8 @@
 .calculator-container {
   width: 100%;
-  margin: 50px auto;
+  margin: 0px auto;
   background-color: #333;
-  padding: 20px;
+  padding: 15px;
   border-radius: 20px;
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.4);
   display: flex;
@@ -14,7 +14,7 @@
   width: 100%;
   background-color: black;
   color: white;
-  padding: 20px;
+  padding: 10px 15px;
   border-radius: 15px;
   margin-bottom: 10px;
   font-size: 2rem;
@@ -22,22 +22,22 @@
 }
 
 .input-display {
-  font-size: 1.5rem;
+  font-size: 18px;
   color: lightgray;
 }
 
 .result-display {
-  font-size: 2rem;
+  font-size: 28px;
   color: white;
 }
 
 .calculator-buttons {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 10px;
 }
 
-button {
+.button {
   padding: 8px 10px;
   font-size: 18px;
   background-color: #444;
@@ -47,7 +47,7 @@ button {
   cursor: pointer;
 }
 
-button:active {
+.button:active {
   background-color: #555;
 }
 

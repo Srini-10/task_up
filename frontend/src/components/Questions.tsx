@@ -929,6 +929,23 @@ const QuestionComponent: React.FC = () => {
     }
   }, []);
 
+  document.addEventListener("contextmenu", (e) => e.preventDefault());
+
+  document.addEventListener("keydown", function (e) {
+    // Disable F12
+    if (e.keyCode === 123) {
+      e.preventDefault();
+    }
+    // Disable Ctrl+Shift+I (for inspecting the page)
+    if (e.ctrlKey && e.shiftKey && e.keyCode === 73) {
+      e.preventDefault();
+    }
+    // Disable Ctrl+U (View Source)
+    if (e.ctrlKey && e.keyCode === 85) {
+      e.preventDefault();
+    }
+  });
+
   const BpRadioIcon = styled("span")(({ theme }) => ({
     borderRadius: "50%",
     width: 18,
@@ -1406,7 +1423,7 @@ const QuestionComponent: React.FC = () => {
                           <form
                             ref={formRef}
                             onSubmit={() => handleSubmit}
-                            className="px-10 py-8 h-auto bg-white overflow-hidden rounded-xl border-[2px] border-[#155e75]"
+                            className="px-10 py-8 h-auto bg-white overflow-hidden select-none rounded-xl border-[2px] border-[#155e75]"
                             style={{
                               boxShadow: "0px 2.5px 0px 0px #155e75",
                             }}
@@ -1579,7 +1596,11 @@ const QuestionComponent: React.FC = () => {
                               }}
                             >
                               <button
-                                className="text-[15px] font-medium bg-slate-100 py-2 px-3 rounded-md"
+                                className={`text-[15px] font-medium py-2 px-3 rounded-md ${
+                                  selectedIndexes[0] === 0
+                                    ? "bg-slate-100 cursor-not-allowed"
+                                    : "bg-slate-100 hover:bg-cyan-800 hover:text-slate-100"
+                                }`}
                                 onClick={handlePrevious}
                                 disabled={selectedIndexes[0] === 0}
                               >
@@ -1590,7 +1611,11 @@ const QuestionComponent: React.FC = () => {
                               </button>
 
                               <button
-                                className="text-[15px] font-medium bg-slate-100 py-2 px-3 rounded-md"
+                                className={`text-[15px] font-medium py-2 px-3 rounded-md ${
+                                  selectedIndexes[0] === questions.length - 1
+                                    ? "bg-slate-100 cursor-not-allowed"
+                                    : "bg-slate-100 hover:bg-cyan-800 hover:text-slate-100"
+                                }`}
                                 onClick={handleNext}
                                 disabled={
                                   selectedIndexes[0] === questions.length - 1
@@ -1635,14 +1660,14 @@ const QuestionComponent: React.FC = () => {
 
                             {/* Text Input Area */}
                             <textarea
-                              className="w-full h-40 p-2 border-[1px] border-slate-300 rounded-md resize-none text-[14px] focus:outline-none"
+                              className="w-full h-[13vh] mb-2 p-2 border-[1px] border-slate-300 rounded-md resize-none text-[14px] focus:outline-none"
                               placeholder="Type something..."
                               value={noteText}
                               onChange={(e) => setNoteText(e.target.value)}
                             />
 
                             {/* Calculator */}
-                            <div className="w-[80%]">
+                            <div className="w-[80%] mx-auto">
                               <Calculator />
                             </div>
                             {/* Drawing Area */}

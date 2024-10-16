@@ -72,48 +72,118 @@ const Calculator = () => {
         <div className="result-display">{result}</div>
       </div>
       <div className="calculator-buttons">
-        <button onClick={clearInput}>AC</button>
-        <button onClick={deleteLast}>⌫</button>
-        <button onClick={() => handleButtonClick("%")}>%</button>
-        <button onClick={() => handleButtonClick("/")}>÷</button>
+        <button className="button" onClick={clearInput}>
+          AC
+        </button>
+        <button className="button" onClick={deleteLast}>
+          ⌫
+        </button>
+        <button className="button" onClick={() => handleButtonClick("%")}>
+          %
+        </button>
+        <button className="button" onClick={() => handleButtonClick("/")}>
+          ÷
+        </button>
 
-        <button onClick={() => handleButtonClick("7")}>7</button>
-        <button onClick={() => handleButtonClick("8")}>8</button>
-        <button onClick={() => handleButtonClick("9")}>9</button>
-        <button onClick={() => handleButtonClick("*")}>×</button>
+        <button className="button" onClick={() => handleButtonClick("*")}>
+          ×
+        </button>
+        <button className="button" onClick={() => handleButtonClick("6")}>
+          6
+        </button>
+        <button className="button" onClick={() => handleButtonClick("7")}>
+          7
+        </button>
+        <button className="button" onClick={() => handleButtonClick("8")}>
+          8
+        </button>
+        <button className="button" onClick={() => handleButtonClick("9")}>
+          9
+        </button>
 
-        <button onClick={() => handleButtonClick("4")}>4</button>
-        <button onClick={() => handleButtonClick("5")}>5</button>
-        <button onClick={() => handleButtonClick("6")}>6</button>
-        <button onClick={() => handleButtonClick("-")}>−</button>
+        <button className="button" onClick={() => handleButtonClick("+")}>
+          +
+        </button>
+        <button className="button" onClick={() => handleButtonClick("2")}>
+          2
+        </button>
+        <button className="button" onClick={() => handleButtonClick("3")}>
+          3
+        </button>
+        <button className="button" onClick={() => handleButtonClick("4")}>
+          4
+        </button>
+        <button className="button" onClick={() => handleButtonClick("5")}>
+          5
+        </button>
+        <button className="button" onClick={() => handleButtonClick("-")}>
+          −
+        </button>
 
-        <button onClick={() => handleButtonClick("1")}>1</button>
-        <button onClick={() => handleButtonClick("2")}>2</button>
-        <button onClick={() => handleButtonClick("3")}>3</button>
-        <button onClick={() => handleButtonClick("+")}>+</button>
+        <button className="button" onClick={() => handleButtonClick("1")}>
+          1
+        </button>
 
-        <button onClick={() => handleButtonClick("0")}>0</button>
-        <button onClick={() => handleButtonClick(".")}>.</button>
-        <button onClick={calculateResult}>=</button>
+        <button className="button" onClick={() => handleButtonClick("0")}>
+          0
+        </button>
+        <button className="button" onClick={() => handleButtonClick("00")}>
+          00
+        </button>
+        <button className="button" onClick={() => handleButtonClick(".")}>
+          .
+        </button>
+        <button className="button" onClick={calculateResult}>
+          =
+        </button>
 
         {isScientific && (
           <>
-            <button onClick={() => handleScientificOperation("sin")}>
+            <button
+              className="button"
+              onClick={() => handleScientificOperation("sin")}
+            >
               sin
             </button>
-            <button onClick={() => handleScientificOperation("cos")}>
+            <button
+              className="button"
+              onClick={() => handleScientificOperation("cos")}
+            >
               cos
             </button>
-            <button onClick={() => handleScientificOperation("tan")}>
+            <button
+              className="button"
+              onClick={() => handleScientificOperation("tan")}
+            >
               tan
             </button>
-            <button onClick={() => handleScientificOperation("sqrt")}>√</button>
+            <button
+              className="button"
+              onClick={() => handleScientificOperation("sqrt")}
+            >
+              √
+            </button>
             <button onClick={() => handleScientificOperation("log")}>
               log
             </button>
-            <button onClick={() => handleScientificOperation("ln")}>ln</button>
-            <button onClick={() => handleScientificOperation("exp")}>eˣ</button>
-            <button onClick={() => handleScientificOperation("pow")}>x²</button>
+            <button
+              className="button"
+              onClick={() => handleScientificOperation("ln")}
+            >
+              ln
+            </button>
+            <button
+              className="button"
+              onClick={() => handleScientificOperation("exp")}
+            >
+              eˣ
+            </button>
+            <button
+              className="button"
+              onClick={() => handleScientificOperation("pow")}
+            >
+              x²
+            </button>
           </>
         )}
       </div>

@@ -414,8 +414,10 @@ export default function CreateCandidates() {
         </div>
 
         <div className="flex justify-end mt-5 gap-3">
-          <Button onClick={handleSave}>Save</Button>
           <Button onClick={() => setAddVisible(false)}>Close</Button>
+          <Button color="primary" onClick={handleSave}>
+            Save
+          </Button>
         </div>
       </Modal>
 
