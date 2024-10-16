@@ -255,8 +255,10 @@ export default function CreateCandidates() {
   const filteredItems = React.useMemo(() => {
     let filteredCandidates = [...candidates];
     if (filterValue) {
-      filteredCandidates = filteredCandidates.filter(
-        (candidate) => candidate.registerNumber
+      filteredCandidates = filteredCandidates.filter((candidate) =>
+        candidate.registerNumber
+          .toLowerCase()
+          .includes(filterValue.toLowerCase())
       );
     }
     return filteredCandidates;
