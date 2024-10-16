@@ -31,7 +31,7 @@ export default function CreateCandidates() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [filterValue, setFilterValue] = useState("");
   const [page, setPage] = useState(1);
-  const [rowsPerPage] = useState(5);
+  const [rowsPerPage] = useState(10);
   const [isAddVisible, setAddVisible] = useState(false);
   const [isEditVisible, setEditVisible] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate>({
@@ -370,44 +370,53 @@ export default function CreateCandidates() {
       </div>
 
       {/* Add New Candidate Modal */}
-      <Modal open={isAddVisible} onClose={() => setAddVisible(false)}>
-        <Input
-          label="Register Number"
-          value={newCandidate.registerNumber}
-          onChange={(e) =>
-            setNewCandidate({ ...newCandidate, registerNumber: e.target.value })
-          }
-        />
-        <Input
-          label="Date of Birth"
-          value={newCandidate.dob}
-          onChange={(e) =>
-            setNewCandidate({ ...newCandidate, dob: e.target.value })
-          }
-        />
-        <Input
-          label="Email"
-          value={newCandidate.email}
-          onChange={(e) =>
-            setNewCandidate({ ...newCandidate, email: e.target.value })
-          }
-        />
-        <Input
-          label="Phone"
-          value={newCandidate.phone}
-          onChange={(e) =>
-            setNewCandidate({ ...newCandidate, phone: e.target.value })
-          }
-        />
-        <Input
-          label="Profile Picture"
-          type="file"
-          onChange={(e) =>
-            setProfilePictureFile(e.target.files ? e.target.files[0] : null)
-          }
-        />
+      <Modal open={isAddVisible} closable={false} footer={null}>
+        <div className="flex flex-col justify-between gap-2">
+          <Input
+            label="Register Number"
+            value={newCandidate.registerNumber}
+            onChange={(e) =>
+              setNewCandidate({
+                ...newCandidate,
+                registerNumber: e.target.value,
+              })
+            }
+          />
+          <Input
+            label="Date of Birth"
+            value={newCandidate.dob}
+            onChange={(e) =>
+              setNewCandidate({ ...newCandidate, dob: e.target.value })
+            }
+          />
+          <Input
+            label="Email"
+            value={newCandidate.email}
+            onChange={(e) =>
+              setNewCandidate({ ...newCandidate, email: e.target.value })
+            }
+          />
+          <Input
+            label="Phone"
+            value={newCandidate.phone}
+            onChange={(e) =>
+              setNewCandidate({ ...newCandidate, phone: e.target.value })
+            }
+          />
+          {/* <Input
+            className="mt-3"
+            label="Profile Picture"
+            type="file"
+            onChange={(e) =>
+              setProfilePictureFile(e.target.files ? e.target.files[0] : null)
+            }
+          /> */}
+        </div>
 
-        <Button onClick={handleSave}>Save</Button>
+        <div className="flex justify-end mt-5 gap-3">
+          <Button onClick={handleSave}>Save</Button>
+          <Button onClick={() => setAddVisible(false)}>Close</Button>
+        </div>
       </Modal>
 
       {/* Edit Candidate Modal */}
