@@ -336,7 +336,7 @@ export default function CreateCandidates() {
       <Table aria-label="Candidates Table">
         <TableHeader>
           <TableColumn>S.No</TableColumn>
-          <TableColumn>Profile</TableColumn>
+          {/* <TableColumn>Profile</TableColumn> */}
           <TableColumn>Register Number</TableColumn>
           <TableColumn>Date of Birth</TableColumn>
           <TableColumn>Email</TableColumn>
@@ -347,14 +347,14 @@ export default function CreateCandidates() {
           {items.map((candidate, index) => (
             <TableRow key={candidate.registerNumber}>
               <TableCell>{index + 1}</TableCell>
-              <TableCell>
+              {/* <TableCell>
                 <img
                   src={candidate.profilePicture}
                   alt={"Profile"}
                   width={100}
                   height={100}
                 />
-              </TableCell>
+              </TableCell> */}
               <TableCell>{candidate.registerNumber}</TableCell>
               <TableCell>{candidate.dob}</TableCell>
               <TableCell>{candidate.email}</TableCell>
