@@ -66,11 +66,15 @@ const CreateCandidates = () => {
     }
 
     try {
-      await axios.post("http://localhost:20000/api/testCandidates", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      await axios.post(
+        "https://taskup-backend.vercel.app/api/testCandidates",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
       showToast("candidate registered successfully!");
       fetchCandidates();
@@ -85,7 +89,7 @@ const CreateCandidates = () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        "http://localhost:20000/api/testCandidates"
+        "https://taskup-backend.vercel.app/api/testCandidates"
       );
       setCandidatesList(response.data);
     } catch (error) {
@@ -98,7 +102,7 @@ const CreateCandidates = () => {
   const handleDelete = async (candidateId) => {
     try {
       await axios.delete(
-        `http://localhost:20000/api/testCandidates/${candidateId}`
+        `https://taskup-backend.vercel.app/api/testCandidates/${candidateId}`
       );
       showToast("candidate deleted successfully!");
       fetchCandidates();
@@ -116,7 +120,7 @@ const CreateCandidates = () => {
       phone: candidate.phone,
     });
     setProfilePreview(
-      `http://localhost:20000/uploads/${candidate.profilePicture}`
+      `https://taskup-backend.vercel.app/uploads/${candidate.profilePicture}`
     );
     setEditCandidateId(candidate._id);
     setIsModalVisible(true);
@@ -136,7 +140,7 @@ const CreateCandidates = () => {
 
     try {
       await axios.put(
-        `http://localhost:20000/api/testCandidates/${editCandidateId}`,
+        `https://taskup-backend.vercel.app/api/testCandidates/${editCandidateId}`,
         formData,
         {
           headers: {
@@ -216,7 +220,7 @@ const CreateCandidates = () => {
                       </h1>
                       {candidate.profilePicture && (
                         <img
-                          src={`http://localhost:20000/uploads/${candidate.profilePicture}`}
+                          src={`https://taskup-backend.vercel.app/uploads/${candidate.profilePicture}`}
                           alt="Profile"
                           width="100"
                         />

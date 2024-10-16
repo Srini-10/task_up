@@ -68,7 +68,7 @@ export default function CreateCandidates() {
     const fetchCandidates = async () => {
       try {
         const response = await fetch(
-          "http://localhost:20000/api/testCandidates"
+          "https://taskup-backend.vercel.app/api/testCandidates"
         );
         const data = await response.json();
         setCandidates(data);
@@ -78,7 +78,7 @@ export default function CreateCandidates() {
           // Check if the candidate has a profile picture
           if (candidate.profilePicture) {
             // Construct the image URL assuming the backend serves images from /uploads folder
-            const profilePictureURL = `http://localhost:20000/uploads/${candidate.profilePicture}`;
+            const profilePictureURL = `https://taskup-backend.vercel.app/uploads/${candidate.profilePicture}`;
             console.log(
               `Candidate ${candidate.registerNumber} Profile Picture:`,
               profilePictureURL
@@ -116,7 +116,7 @@ export default function CreateCandidates() {
       formData.append("profilePicture", file);
 
       const response = await fetch(
-        "http://localhost:20000/uploadProfilePicture",
+        "https://taskup-backend.vercel.app/uploadProfilePicture",
         {
           method: "POST",
           body: formData,
@@ -149,7 +149,7 @@ export default function CreateCandidates() {
       };
 
       const response = await fetch(
-        "http://localhost:20000/api/testCandidates",
+        "https://taskup-backend.vercel.app/api/testCandidates",
         {
           method: "POST",
           headers: {
@@ -176,7 +176,7 @@ export default function CreateCandidates() {
   const handleDelete = async (candidateId: string) => {
     try {
       const response = await fetch(
-        `http://localhost:20000/api/testCandidates/${candidateId}`,
+        `https://taskup-backend.vercel.app/api/testCandidates/${candidateId}`,
         {
           method: "DELETE",
         }
@@ -212,7 +212,7 @@ export default function CreateCandidates() {
       }
 
       const response = await fetch(
-        `http://localhost:20000/api/testCandidates/${selectedCandidate._id}`,
+        `https://taskup-backend.vercel.app/api/testCandidates/${selectedCandidate._id}`,
         {
           method: "PUT",
           body: formData,

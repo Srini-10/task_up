@@ -114,7 +114,7 @@ const Home = () => {
     const fetchInputTypes = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:20000/api/inputTypes"
+          "https://taskup-backend.vercel.app/api/inputTypes"
         );
         setInputTypes(response.data);
       } catch (error) {
@@ -130,7 +130,7 @@ const Home = () => {
     const fetchCandidates = async () => {
       try {
         const response = await fetch(
-          "http://localhost:20000/api/testCandidates"
+          "https://taskup-backend.vercel.app/api/testCandidates"
         );
         const data = await response.json();
 
@@ -138,7 +138,7 @@ const Home = () => {
           if (candidate.profilePicture) {
             return {
               ...candidate,
-              profilePicture: `http://localhost:20000/uploads/${candidate.profilePicture}`,
+              profilePicture: `https://taskup-backend.vercel.app/uploads/${candidate.profilePicture}`,
             };
           }
           return candidate;
@@ -181,7 +181,7 @@ const Home = () => {
       const fetchCandidates = async () => {
         try {
           const response = await fetch(
-            "http://localhost:20000/api/testCandidates"
+            "https://taskup-backend.vercel.app/api/testCandidates"
           );
           const data = await response.json();
           console.log(data);
@@ -191,7 +191,7 @@ const Home = () => {
             if (candidate.profilePicture) {
               return {
                 ...candidate,
-                profilePicture: `http://localhost:20000/uploads/${candidate.profilePicture}`,
+                profilePicture: `https://taskup-backend.vercel.app/uploads/${candidate.profilePicture}`,
               };
             }
             return candidate;
@@ -269,7 +269,7 @@ const Home = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:20000/api/tests",
+        "https://taskup-backend.vercel.app/api/tests",
         testData
       );
       console.log(response.data);

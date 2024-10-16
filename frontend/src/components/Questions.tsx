@@ -30,9 +30,9 @@ import tick from "../assets/tick.svg";
 import { Input, Switch } from "antd";
 import Wave from "react-wavify";
 
-type SelectedAnswers = {
-  [key: string]: number[] | number;
-};
+// type SelectedAnswers = {
+//   [key: string]: number[] | number;
+// };
 interface Question {
   _id: string;
   questionText: string;
@@ -62,32 +62,10 @@ const QuestionComponent: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [useEmailAuth, setUseEmailAuth] = useState(false);
   const [testName, setTestName] = useState("");
-  const [selectedAnswers, setSelectedAnswers] = useState<SelectedAnswers>(
-    () => {
-      const savedAnswers = sessionStorage.getItem("selectedAnswers");
-      if (savedAnswers) {
-        try {
-          const parsed = JSON.parse(savedAnswers);
-          // Validate the format: either number[] or number
-          for (const key in parsed) {
-            if (
-              !(
-                (Array.isArray(parsed[key]) &&
-                  parsed[key].every((item) => typeof item === "number")) ||
-                typeof parsed[key] === "number"
-              )
-            ) {
-              return {}; // Invalid data format, return empty object
-            }
-          }
-          return parsed;
-        } catch (error) {
-          return {}; // Return empty object on error
-        }
-      }
-      return {}; // Return empty object if no data in sessionStorage
-    }
-  );
+  const [selectedAnswers, setSelectedAnswers] = useState(() => {
+    const storedAnswers = sessionStorage.getItem("selectedAnswers");
+    return storedAnswers ? JSON.parse(storedAnswers) : {};
+  });
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
   const [malpractice, setMalpractice] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -385,7 +363,7 @@ const QuestionComponent: React.FC = () => {
 
         // Submit answers and get the score
         const submissionResponse = await axios.post(
-          `http://localhost:20000/api/tests/${testId}/submit`,
+          `https://taskup-backend.vercel.app/api/tests/${testId}/submit`,
           {
             email,
             registerNumber,
@@ -415,7 +393,7 @@ const QuestionComponent: React.FC = () => {
 
         // Save the submission to the database
         await axios.post(
-          `http://localhost:20000/api/tests/${testId}/save-submission`,
+          `https://taskup-backend.vercel.app/api/tests/${testId}/save-submission`,
           saveSubmissionPayload
         );
 
@@ -469,7 +447,7 @@ const QuestionComponent: React.FC = () => {
     const fetchTestData = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:20000/api/tests/${testId}`
+          `https://taskup-backend.vercel.app/api/tests/${testId}`
         );
         const test = response.data;
 
@@ -503,7 +481,7 @@ const QuestionComponent: React.FC = () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        `http://localhost:20000/api/tests/${testId}/questions`
+        `https://taskup-backend.vercel.app/api/tests/${testId}/questions`
       );
       setQuestions(response.data);
     } catch (error) {
@@ -585,7 +563,7 @@ const QuestionComponent: React.FC = () => {
   const checkTestSubmission = async (email: string, registerNumber: string) => {
     try {
       const response = await axios.post(
-        `http://localhost:20000/api/tests/${testId}/check-submission`,
+        `https://taskup-backend.vercel.app/api/tests/${testId}/check-submission`,
         { email, registerNumber }
       );
 
@@ -627,7 +605,7 @@ const QuestionComponent: React.FC = () => {
       setLoading(true);
       try {
         const response = await axios.get(
-          `http://localhost:20000/api/tests/${testId}`
+          `https://taskup-backend.vercel.app/api/tests/${testId}`
         );
         setTestName(response.data.testName);
       } catch (error) {
@@ -647,7 +625,7 @@ const QuestionComponent: React.FC = () => {
 
     try {
       const response = await axios.post(
-        `http://localhost:20000/api/tests/${testId}/authenticate`,
+        `https://taskup-backend.vercel.app/api/tests/${testId}/authenticate`,
         { registerNumber, dob, email, phone }
       );
 
@@ -732,10 +710,7 @@ const QuestionComponent: React.FC = () => {
   };
 
   // For Single Answer Inputs like Radio and Select
-  const handleSingleAnswerChange = (
-    questionId: string,
-    answer: number | string
-  ) => {
+  const handleSingleAnswerChange = (questionId: string, answer: any) => {
     handleInputChange(questionId, [answer]); // Wrap the single answer in an array
   };
 
@@ -923,6 +898,33 @@ const QuestionComponent: React.FC = () => {
       preventDefault: () => {},
     });
   };
+
+  useEffect(() => {
+    // Disable page refresh (beforeunload event)
+    const handleBeforeUnload = (e) => {
+      const message = "Are you sure you want to leave?";
+      e.returnValue = message; // Standard for most browsers
+      return message; // Some older browsers
+    };
+
+    // Disable Escape key
+    const handleEscapeKey = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault(); // Prevent the default action of the Escape key
+        console.log("Escape key is disabled.");
+      }
+    };
+
+    // Add event listeners
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("keydown", handleEscapeKey, true);
+
+    // Cleanup event listeners on component unmount
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("keydown", handleEscapeKey, true);
+    };
+  }, []);
 
   useEffect(() => {
     // Retrieve the submission success status from localStorage when the component mounts
@@ -1341,7 +1343,7 @@ const QuestionComponent: React.FC = () => {
                       </h2>
                     )}
                     <div className="flex justify-between gap-6 items-center font-medium text-gray-700 text-[14.5px]">
-                      <div className="flex items-center space-x-2">
+                      <div className="items-center hidden space-x-2">
                         <span className="text-[#083344] font-medium">
                           {fullScreenMode ? "Minimize" : "Full Screen"}
                         </span>

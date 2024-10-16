@@ -16,6 +16,6 @@
     }
   ],
   "env": {
-    "REACT_APP_API_URL": "http://localhost:20000"
+    "REACT_APP_API_URL": "https://taskup-backend.vercel.app"
   }
 }

@@ -89,7 +89,7 @@ const EditTest = () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        "http://localhost:20000/api/testCandidates"
+        "https://taskup-backend.vercel.app/api/testCandidates"
       );
       setCandidates(response.data);
       console.log(response.data);
@@ -133,7 +133,7 @@ const EditTest = () => {
     const fetchTestDetails = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:20000/api/tests/${testId}`
+          `https://taskup-backend.vercel.app/api/tests/${testId}`
         );
         const test = response.data;
 
@@ -243,7 +243,7 @@ const EditTest = () => {
 
     try {
       await axios.put(
-        `http://localhost:20000/api/tests/${testId}`,
+        `https://taskup-backend.vercel.app/api/tests/${testId}`,
         updatedTestData
       );
       showToast("Test updated successfully!");
@@ -303,10 +303,14 @@ const EditTest = () => {
   };
 
   const handleDeleteQuestion = (index) => {
-    const updatedQuestions = [...questions];
-    updatedQuestions.splice(index, 1);
-    setQuestions(updatedQuestions);
-    console.log(`Question at index ${index} deleted.`);
+    if (index >= 0 && index < questions.length) {
+      const updatedQuestions = [...questions];
+      updatedQuestions.splice(index, 1);
+      setQuestions(updatedQuestions);
+      console.log(`Question at index ${index} deleted.`);
+    } else {
+      console.error("Invalid index for deletion.");
+    }
   };
 
   const handleConfirmDelete = (index) => {

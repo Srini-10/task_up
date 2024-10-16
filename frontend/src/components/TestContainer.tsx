@@ -24,7 +24,7 @@ const TestContainer: React.FC = () => {
     const fetchTests = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:20000/api/tests/recent"
+          "https://taskup-backend.vercel.app/api/tests/recent"
         );
         setTests(response.data);
         setLoading(false);
@@ -43,7 +43,7 @@ const TestContainer: React.FC = () => {
     setLoadingAnimation(true);
     try {
       const response = await axios.delete(
-        `http://localhost:20000/api/tests/${testId}`
+        `https://taskup-backend.vercel.app/api/tests/${testId}`
       );
       showToast(response.data.message);
       // After deletion, fetch the updated list of tests
