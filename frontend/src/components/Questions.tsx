@@ -29,6 +29,8 @@ import hexagonal from "../assets/hexagonal.svg";
 import tick from "../assets/tick.svg";
 import { Input, Switch } from "antd";
 import Wave from "react-wavify";
+// import DraggableCalculator from "./Calculator/DraggableCalculator.tsx";
+import Calculator from "./Calculator/Calculator.tsx";
 
 // type SelectedAnswers = {
 //   [key: string]: number[] | number;
@@ -66,7 +68,11 @@ const QuestionComponent: React.FC = () => {
     const storedAnswers = sessionStorage.getItem("selectedAnswers");
     return storedAnswers ? JSON.parse(storedAnswers) : {};
   });
-  const [tabSwitchCount, setTabSwitchCount] = useState(0);
+  const [tabSwitchCount, setTabSwitchCount] = useState(() => {
+    // Retrieve the count from localStorage, or default to 0 if not found
+    const storedCount = sessionStorage.getItem("tabSwitchCount");
+    return storedCount ? parseInt(storedCount, 10) : 0;
+  });
   const [malpractice, setMalpractice] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -79,9 +85,9 @@ const QuestionComponent: React.FC = () => {
   const [noteText, setNoteText] = useState("");
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const ctxRef = useRef<any>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [color] = useState("#000");
-  const [lineWidth] = useState(3);
+  // const [isDrawing, setIsDrawing] = useState(false);
+  // const [color] = useState("#000");
+  // const [lineWidth] = useState(3);
   const [scale, setScale] = useState(1);
   const [offsetX] = useState(0);
   const [offsetY] = useState(0);
@@ -105,32 +111,32 @@ const QuestionComponent: React.FC = () => {
   };
 
   // Initialize canvas
-  const startDrawing = (e) => {
-    setIsDrawing(true);
-    const canvas = canvasRef.current;
-    ctxRef.current = canvas!.getContext("2d");
+  // const startDrawing = (e) => {
+  //   setIsDrawing(true);
+  //   const canvas = canvasRef.current;
+  //   ctxRef.current = canvas!.getContext("2d");
 
-    // Set stroke style and width
-    ctxRef.current.strokeStyle = color;
-    ctxRef.current.lineWidth = lineWidth;
-    ctxRef.current.lineCap = "round";
+  //   // Set stroke style and width
+  //   ctxRef.current.strokeStyle = color;
+  //   ctxRef.current.lineWidth = lineWidth;
+  //   ctxRef.current.lineCap = "round";
 
-    ctxRef.current.beginPath();
-    ctxRef.current.moveTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
-  };
+  //   ctxRef.current.beginPath();
+  //   ctxRef.current.moveTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+  // };
 
-  const draw = (e) => {
-    if (!isDrawing) return;
-    ctxRef.current.lineTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
-    ctxRef.current.stroke();
-  };
+  // const draw = (e) => {
+  //   if (!isDrawing) return;
+  //   ctxRef.current.lineTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+  //   ctxRef.current.stroke();
+  // };
 
-  const stopDrawing = () => {
-    if (ctxRef.current) {
-      setIsDrawing(false);
-      ctxRef.current.closePath();
-    }
-  };
+  // const stopDrawing = () => {
+  //   if (ctxRef.current) {
+  //     setIsDrawing(false);
+  //     ctxRef.current.closePath();
+  //   }
+  // };
 
   // Clear canvas function
   const clearCanvas = () => {
@@ -287,6 +293,9 @@ const QuestionComponent: React.FC = () => {
     if (document.visibilityState === "hidden") {
       setTabSwitchCount((prevCount) => {
         const newCount = prevCount + 1;
+
+        // Save the updated count in localStorage
+        // sessionStorage.setItem("tabSwitchCount", newCount);
 
         if (newCount > 3) {
           showToast(
@@ -1346,7 +1355,7 @@ const QuestionComponent: React.FC = () => {
                       <button
                         onClick={triggerFormSubmit}
                         type="submit"
-                        className="bg-cyan-700 p-2.5 rounded-md text-white font-medium text-[14.5px]"
+                        className="bg-cyan-700 p-2.5 rounded-md flex items-center gap-2 text-white font-medium text-[14.5px]"
                         // disabled={!areAllQuestionsAnswered}
                       >
                         {submitLoading && <Spinner size="sm" color="default" />}
@@ -1632,15 +1641,19 @@ const QuestionComponent: React.FC = () => {
                               onChange={(e) => setNoteText(e.target.value)}
                             />
 
+                            {/* Calculator */}
+                            <div className="w-[80%]">
+                              <Calculator />
+                            </div>
                             {/* Drawing Area */}
-                            <div
+                            {/* <div
                               className="mt-4 border-[1.5px] border-slate-300 bg-slate-50 rounded-md overflow-auto"
                               style={{
                                 height: "32vh",
                                 maxWidth: "500px",
                               }}
-                            >
-                              <canvas
+                            > */}
+                            {/* <canvas
                                 ref={canvasRef}
                                 className="rounded-md"
                                 width={1000}
@@ -1649,9 +1662,9 @@ const QuestionComponent: React.FC = () => {
                                 onMouseMove={draw}
                                 onMouseUp={stopDrawing}
                                 onMouseLeave={stopDrawing}
-                              />
-                              {/* Color Picker and Size Changer */}
-                              {/* <div className="mt-4 min-w-[150px]">
+                              /> */}
+                            {/* Color Picker and Size Changer */}
+                            {/* <div className="mt-4 min-w-[150px]">
                                 <label className="mr-2">Pencil Color:</label>
                                 <input
                                   type="color"
@@ -1670,7 +1683,7 @@ const QuestionComponent: React.FC = () => {
                                 />
                                 <span className="ml-2">{lineWidth}</span>
                               </div> */}
-                            </div>
+                            {/* </div> */}
                           </div>
                           <div
                             className="w-full h-14 p-2 flex items-center rounded-lg justify-end px-4 border-[2px] border-[#155e75] text-cyan-900 bg-white"

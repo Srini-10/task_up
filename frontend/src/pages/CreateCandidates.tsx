@@ -333,6 +333,7 @@ export default function CreateCandidates() {
 
       <Table aria-label="Candidates Table">
         <TableHeader>
+          <TableColumn>S.No</TableColumn>
           <TableColumn>Profile</TableColumn>
           <TableColumn>Register Number</TableColumn>
           <TableColumn>Date of Birth</TableColumn>
@@ -341,8 +342,9 @@ export default function CreateCandidates() {
           <TableColumn>Actions</TableColumn>
         </TableHeader>
         <TableBody>
-          {items.map((candidate) => (
+          {items.map((candidate, index) => (
             <TableRow key={candidate.registerNumber}>
+              <TableCell>{index + 1}</TableCell>
               <TableCell>
                 <img
                   src={candidate.profilePicture}
@@ -351,7 +353,6 @@ export default function CreateCandidates() {
                   height={100}
                 />
               </TableCell>
-
               <TableCell>{candidate.registerNumber}</TableCell>
               <TableCell>{candidate.dob}</TableCell>
               <TableCell>{candidate.email}</TableCell>
