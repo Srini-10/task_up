@@ -31,13 +31,13 @@ app.use(express.json());
 
 app.use("/uploads", express.static("uploads"));
 
-mongoose
-  .connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((err) => console.error("MongoDB connection error:", err));
+// mongoose
+//   .connect(process.env.MONGODB_URI, {
+//     useNewUrlParser: true,
+//     useUnifiedTopology: true,
+//   })
+//   .then(() => console.log("Connected to MongoDB"))
+//   .catch((err) => console.error("MongoDB connection error:", err));
 
 // Set up multer for file uploads
 const storage = multer.diskStorage({
@@ -52,13 +52,23 @@ const storage = multer.diskStorage({
   },
 });
 
+const mongoURI = "mongodb://localhost:27017/sassDB";
+
+mongoose
+  .connect(mongoURI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("Connected to MongoDB"))
+  .catch((err) => console.error("MongoDB connection error:", err));
+
 const upload = multer({ storage: storage });
 
 const QuestionSchema = new mongoose.Schema({
   questionText: { type: String, required: true },
   inputType: { type: String, required: true },
   options: { type: [String], default: [] },
-  correctAnswerIndices: { type: [String], required: true },
+  correctAnswers: { type: [Number], required: true },
 });
 
 // Define the schema for tests
@@ -164,9 +174,21 @@ app.put(
   async (req, res) => {
     try {
       const { id } = req.params;
-      const { registerNumber, dob, email, phone } = req.body;
+      const { _id, registerNumber, dob, email, phone } = req.body;
+
+      // Check if register number exists
+      const existingCandidate = await CreateCandidate.findOne({
+        registerNumber,
+      });
+
+      if (existingCandidate) {
+        return res
+          .status(400)
+          .json({ message: "Register number already exists" });
+      }
 
       const updatedFields = {
+        _id,
         registerNumber,
         dob,
         email,
@@ -179,20 +201,24 @@ app.put(
       }
 
       // Update the candidate record in the database
-      const updatedcandidate = await CreateCandidate.findByIdAndUpdate(
+      const updatedCandidate = await CreateCandidate.findByIdAndUpdate(
         id,
         updatedFields,
         { new: true }
       );
 
-      if (!updatedcandidate) {
-        return res.status(404).send("candidate not found");
+      if (!updatedCandidate) {
+        return res.status(404).send({ message: "Candidate not found" });
       }
 
-      res.send("candidate updated successfully");
+      // Send JSON response instead of plain text
+      res.status(200).json({
+        message: "Candidate updated successfully",
+        candidate: updatedCandidate,
+      });
     } catch (error) {
       console.error("Error updating candidate: ", error);
-      res.status(500).send("Error updating candidate");
+      res.status(500).json({ message: "Error updating candidate" });
     }
   }
 );
@@ -211,9 +237,9 @@ app.get("/api/testCandidates", async (req, res) => {
 app.delete("/api/testCandidates/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const deletedcandidate = await CreateCandidate.findByIdAndDelete(id);
+    const deletedCandidate = await CreateCandidate.findByIdAndDelete(id);
 
-    if (!deletedcandidate) {
+    if (!deletedCandidate) {
       return res.status(404).send("candidate not found");
     }
 
@@ -255,12 +281,12 @@ app.post("/api/tests", async (req, res) => {
         phone: candidate.phone,
       }));
 
-    // Validate that each question has correctAnswerIndices, or set default to an empty array
+    // Validate that each question has correctAnswers, or set default to an empty array
     const validatedQuestions = questions.map((q) => ({
       questionText: q.questionText,
       inputType: q.inputType,
       options: q.options,
-      correctAnswerIndices: q.correctAnswerIndices || [],
+      correctAnswers: q.correctAnswers || [],
     }));
 
     // Create a new test instance
@@ -320,7 +346,7 @@ app.get("/api/tests", async (req, res) => {
         questionText: q.questionText,
         inputType: q.inputType,
         options: q.options,
-        correctAnswerIndices: q.correctAnswerIndices || [],
+        correctAnswers: q.correctAnswers || [],
       })),
       candidates: test.candidates,
       malpractice: test.malpractice,
@@ -386,7 +412,7 @@ app.get("/api/tests/:testId/ranking", async (req, res) => {
         _id: question._id,
         questionText: question.questionText,
         options: question.options,
-        answers: question.answers,
+        correctAnswers: question.correctAnswers,
       })),
       malpractice:
         submission.malpractice === "true" || submission.malpractice === true
@@ -459,9 +485,9 @@ app.delete("/api/tests/:testId", async (req, res) => {
 app.put("/api/tests/:testId/questions/:questionId", async (req, res) => {
   try {
     const { testId, questionId } = req.params;
-    const { questionText, options, correctAnswerIndices, inputType } = req.body;
+    const { questionText, options, correctAnswers, inputType } = req.body;
 
-    // Log the received request body to ensure correctAnswerIndices is populated
+    // Log the received request body to ensure correctAnswers is populated
     console.log("Received request data:", req.body);
 
     // Update the specific question in the test
@@ -471,7 +497,7 @@ app.put("/api/tests/:testId/questions/:questionId", async (req, res) => {
         $set: {
           "questions.$.questionText": questionText,
           "questions.$.options": options,
-          "questions.$.correctAnswerIndices": correctAnswerIndices, // Ensure this is properly updated
+          "questions.$.correctAnswers": correctAnswers, // Ensure this is properly updated
           "questions.$.inputType": inputType,
         },
       },
@@ -577,9 +603,7 @@ app.post("/api/tests/:testId/authenticate", async (req, res) => {
       (candidate) =>
         (candidate.registerNumber === registerNumber &&
           candidate.dob === dob) ||
-        (candidate.email &&
-          candidate.email.toLowerCase() === email.toLowerCase() &&
-          candidate.phone === phone)
+        (candidate.email === email && candidate.phone === phone)
     );
 
     if (!candidate) {
@@ -622,27 +646,59 @@ app.post("/api/tests/:testId/submit", async (req, res) => {
     const totalQuestions = test.questions.length;
 
     // Calculate score based on selected answers
-    test.questions.forEach((question) => {
+    test.questions.forEach((question, index) => {
       const submittedAnswer = answers.find(
-        (answer) => answer.questionId === question._id
-      )?.selectedAnswer; // Find the submitted answer based on question ID
+        (answer) => answer.questionId === question._id.toString()
+      )?.selectedAnswer;
 
-      // Check if the question has multiple correct answers
-      if (Array.isArray(question.correctAnswer)) {
-        if (
-          submittedAnswer &&
-          question.correctAnswer.includes(submittedAnswer)
-        ) {
+      if (!submittedAnswer) {
+        console.log(`No answer found for question ${question._id}`);
+        return;
+      }
+
+      console.log(`Comparing answer for question ${question._id}`);
+      console.log(`Submitted answer: ${submittedAnswer}`);
+      console.log(`Correct answers: ${question.correctAnswers}`);
+
+      // Check if the correct answer is an array or a single value
+      if (Array.isArray(question.correctAnswers)) {
+        // Ensure submittedAnswer is an array for comparison
+        const formattedSubmittedAnswer = Array.isArray(submittedAnswer)
+          ? submittedAnswer
+          : [submittedAnswer]; // Convert single answer to an array
+
+        // Increment score if any submitted answer matches any correct answer
+        const anyCorrect = formattedSubmittedAnswer.some((ans) =>
+          question.correctAnswers.includes(ans)
+        );
+        if (anyCorrect) {
           score += 1;
+          console.log(`Increment score: 1 point for a correct answer match.`);
         }
-      } else if (submittedAnswer === question.correctAnswer) {
-        score += 1;
+
+        // Additional score for matching index
+        formattedSubmittedAnswer.forEach((ans, idx) => {
+          if (
+            question.correctAnswers[idx] &&
+            ans === question.correctAnswers[idx]
+          ) {
+            score += 1; // Increment score for correct answer at the same index
+            console.log(
+              `Increment score: 1 point for correct answer at the same index.`
+            );
+          }
+        });
+      } else {
+        // Single value correct answer case
+        console.log(`Single answer logic for question ${question._id}`);
+        if (submittedAnswer === question.correctAnswers) {
+          score += 1;
+          console.log(`Increment score: 1 point for correct single answer.`);
+        }
       }
     });
 
     console.log("Score calculated:", { score, totalQuestions });
-
-    // You can save or use the `email` field as necessary here, e.g., store it in the database, send a confirmation email, etc.
 
     res.json({ score, totalQuestions });
   } catch (error) {
@@ -725,7 +781,11 @@ app.post("/api/tests/:testId/check-submission", async (req, res) => {
       $or: [{ email }, { registerNumber }],
     });
 
-    console.log("Submission found:", submission);
+    console.log("Checking for submission with:", {
+      testId,
+      email,
+      registerNumber,
+    });
 
     if (submission) {
       // If submission exists, get total number of questions for the test
@@ -790,7 +850,7 @@ app.put("/api/tests/:testId", async (req, res) => {
         questionText: q.questionText,
         inputType: q.inputType,
         options: q.options,
-        correctAnswerIndices: q.correctAnswerIndices || [], // Ensure this is valid
+        correctAnswers: q.correctAnswers || [], // Ensure this is valid
       };
     });
 

@@ -28,7 +28,7 @@ interface Question {
   inputType: string;
   questionText: string;
   options: string[];
-  correctAnswerIndices: number[];
+  correctAnswers: string[];
   index: number;
 }
 
@@ -49,7 +49,7 @@ const Home = () => {
     inputType: "",
     questionText: "",
     options: [],
-    correctAnswerIndices: [],
+    correctAnswers: [],
     index: 0,
   });
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -114,7 +114,7 @@ const Home = () => {
     const fetchInputTypes = async () => {
       try {
         const response = await axios.get(
-          "https://taskup-backend.vercel.app/api/inputTypes"
+          "http://localhost:20000/api/inputTypes"
         );
         setInputTypes(response.data);
       } catch (error) {
@@ -125,101 +125,89 @@ const Home = () => {
     fetchInputTypes();
   }, []);
 
+  // Fetch candidates from API or localStorage on mount
   useEffect(() => {
     const fetchCandidates = async () => {
       try {
         const response = await fetch(
-          "https://taskup-backend.vercel.app/api/testCandidates"
+          "http://localhost:20000/api/testCandidates"
         );
-
         const data = await response.json();
-        console.log(data);
-        setCandidates(data);
 
-        // Create an array to hold the updated candidates with actual image URLs
         const updatedCandidates = data.map((candidate: any) => {
-          // Check if the candidate has a profile picture
           if (candidate.profilePicture) {
-            // Construct the image URL assuming the backend serves images from /uploads folder
-            const profilePictureURL = `https://taskup-backend.vercel.app/uploads/${candidate.profilePicture}`;
-            console.log(
-              `Candidate ${candidate.registerNumber} Profile Picture:`,
-              profilePictureURL
-            );
-
-            // Return the candidate object with the updated profilePicture URL
             return {
               ...candidate,
-              profilePicture: profilePictureURL,
+              profilePicture: `http://localhost:20000/uploads/${candidate.profilePicture}`,
             };
           }
-
-          // If no profile picture, return the candidate as is
           return candidate;
         });
 
-        // Update the state with the modified candidates
         setCandidates(updatedCandidates);
+        localStorage.setItem("candidates", JSON.stringify(updatedCandidates)); // Store fetched candidates in localStorage
       } catch (error) {
-        console.error(
-          "Error fetching candidates or their profile pictures:",
-          error
-        );
+        console.error("Error fetching candidates:", error);
       }
     };
 
-    fetchCandidates();
+    const storedCandidates = localStorage.getItem("candidates");
+    const storedSelectedCandidates = localStorage.getItem("selectedCandidates");
+
+    if (storedCandidates) {
+      setCandidates(JSON.parse(storedCandidates));
+    } else {
+      fetchCandidates();
+    }
+
+    if (storedSelectedCandidates) {
+      setSelectedCandidates(JSON.parse(storedSelectedCandidates));
+    }
   }, []);
 
   useEffect(() => {
     const storedCandidates = JSON.parse(
-      localStorage.getItem("candidates") as any
+      localStorage.getItem("candidates") as string
     );
     const storedSelectedCandidates = JSON.parse(
-      localStorage.getItem("selectedCandidates") as any
+      localStorage.getItem("selectedCandidates") as string
     );
 
+    // If there are candidates stored in localStorage, set them
     if (storedCandidates && storedCandidates.length > 0) {
       setCandidates(storedCandidates);
     } else {
+      // Fetch candidates from API if not in localStorage
       const fetchCandidates = async () => {
         try {
           const response = await fetch(
-            "https://taskup-backend.vercel.app/api/testCandidates"
+            "http://localhost:20000/api/testCandidates"
           );
-
           const data = await response.json();
           console.log(data);
 
+          // Update profilePicture URLs
           const updatedCandidates = data.map((candidate: any) => {
             if (candidate.profilePicture) {
-              const profilePictureURL = `https://taskup-backend.vercel.app/uploads/${candidate.profilePicture}`;
-              console.log(
-                `Candidate ${candidate.registerNumber} Profile Picture:`,
-                profilePictureURL
-              );
-
               return {
                 ...candidate,
-                profilePicture: profilePictureURL,
+                profilePicture: `http://localhost:20000/uploads/${candidate.profilePicture}`,
               };
             }
-
             return candidate;
           });
 
           setCandidates(updatedCandidates);
+          localStorage.setItem("candidates", JSON.stringify(updatedCandidates)); // Store candidates in localStorage
         } catch (error) {
-          console.error(
-            "Error fetching candidates or their profile pictures:",
-            error
-          );
+          console.error("Error fetching candidates:", error);
         }
       };
 
       fetchCandidates();
     }
 
+    // If selected candidates are stored, set them
     if (storedSelectedCandidates) {
       setSelectedCandidates(storedSelectedCandidates);
     }
@@ -238,6 +226,13 @@ const Home = () => {
       return;
     }
 
+    // Validate that there are questions
+    if (questions.length === 0) {
+      setWarning("Please add at least one question.");
+      setLoading(false);
+      return;
+    }
+
     // Find the selected candidates by matching _id with selectedCandidates array
     const selectedCandidateData = candidates
       .filter((candidate: any) => selectedCandidates.includes(candidate._id))
@@ -250,10 +245,12 @@ const Home = () => {
 
     console.log("Candidates", selectedCandidateData);
     console.log("CandidatesID", selectedCandidates);
+
     // Convert startDate and endDate to UTC before sending to backend
     const utcStartDate = new Date(startDate).toISOString();
     const utcEndDate = new Date(endDate).toISOString();
 
+    // Map the questions array
     const testData = {
       testName,
       startDate: utcStartDate,
@@ -264,8 +261,7 @@ const Home = () => {
         questionText: q.questionText,
         inputType: q.inputType,
         options: q.options,
-        correctAnswerIndices:
-          q.correctAnswerIndices.length > 0 ? q.correctAnswerIndices : [],
+        correctAnswers: q.correctAnswers ? q.correctAnswers : [],
       })),
       candidates: selectedCandidateData,
       malpractice: false,
@@ -273,7 +269,7 @@ const Home = () => {
 
     try {
       const response = await axios.post(
-        "https://taskup-backend.vercel.app/api/tests",
+        "http://localhost:20000/api/tests",
         testData
       );
       console.log(response.data);
@@ -302,18 +298,23 @@ const Home = () => {
     localStorage.removeItem("selectedCandidates");
   };
 
+  // Update localStorage whenever selected candidates change
   useEffect(() => {
-    const savedSelectedCandidates = localStorage.getItem("selectedCandidates");
-    if (savedSelectedCandidates) {
-      setSelectedCandidates(JSON.parse(savedSelectedCandidates));
+    if (selectedCandidates.length > 0) {
+      localStorage.setItem(
+        "selectedCandidates",
+        JSON.stringify(selectedCandidates)
+      );
     }
-  }, []);
+  }, [selectedCandidates]);
 
+  // Function to handle candidate selection/deselection
   const handleCandidateSelect = (candidateId: string) => {
-    setSelectedCandidates((prevSelected) =>
-      prevSelected.includes(candidateId)
-        ? prevSelected.filter((id) => id !== candidateId)
-        : [...prevSelected, candidateId]
+    setSelectedCandidates(
+      (prevSelected) =>
+        prevSelected.includes(candidateId)
+          ? prevSelected.filter((id) => id !== candidateId) // Deselect if already selected
+          : [...prevSelected, candidateId] // Select if not already selected
     );
   };
 
@@ -330,10 +331,10 @@ const Home = () => {
 
   const handleCorrectAnswerSelect = (selectedIndices: number | number[]) => {
     setEditingQuestion((prev) => ({
-      ...prev, // Spread the previous state
-      correctAnswerIndices: Array.isArray(selectedIndices)
-        ? selectedIndices
-        : [selectedIndices],
+      ...prev,
+      correctAnswers: Array.isArray(selectedIndices)
+        ? selectedIndices.map(String)
+        : [String(selectedIndices)],
     }));
   };
 
@@ -345,7 +346,7 @@ const Home = () => {
     setEditingQuestion((prev) => ({
       ...prev,
       inputType: newInputType,
-      correctAnswerIndices: [],
+      correctAnswers: [],
     }));
   };
 
@@ -422,7 +423,7 @@ const Home = () => {
         candidate.email.toLowerCase().includes(query) ||
         candidate.phone.includes(query) ||
         candidate.registerNumber.includes(query) ||
-        (candidate.dob && candidate.dob.includes(query))
+        candidate.dob.includes(query)
       );
     }
   );
@@ -517,7 +518,7 @@ const Home = () => {
                 className="flex justify-center items-center"
               >
                 <div
-                  className="w-[50vw] h-[70vh] justify-start flex flex-col mx-auto overflow-y-scroll scroll-smooth"
+                  className="w-[50vw] h-[70vh] justify-start flex flex-col mx-auto"
                   style={{
                     padding: "5px",
                     background: "#fff",
@@ -592,68 +593,72 @@ const Home = () => {
                     </div>
                   </div>
 
-                  <List>
-                    {filteredCandidates.map((candidate) => (
-                      <ListItem key={candidate._id} className="items-start">
-                        <div
-                          className={`w-full flex justify-start items-center -my-[6.5px] h-16 rounded-lg p-6 border-b-[1.5px] hover:bg-[#e7ebec] border-gray-200 cursor-pointer ${
-                            selectedCandidates.includes(candidate._id)
-                              ? "bg-[#d9e5e7]"
-                              : ""
-                          }`}
-                          onClick={() => handleCandidateSelect(candidate._id)} // Handle selection on click
-                        >
-                          <Checkbox
-                            checked={selectedCandidates.includes(candidate._id)}
-                            onChange={() =>
-                              handleCandidateSelect(candidate._id)
-                            }
-                            style={{ display: "none" }} // Hide the checkbox
-                          />
-                          {candidate.profilePicture ? (
-                            <img
-                              src={candidate.profilePicture}
-                              alt={`${candidate.registerNumber}'s profile`}
-                              className="w-10 h-10 bg-slate-400 p-2.5 rounded-lg mr-4"
+                  <div className="overflow-y-scroll">
+                    <List>
+                      {filteredCandidates.map((candidate) => (
+                        <ListItem key={candidate._id} className="items-start">
+                          <div
+                            className={`w-full flex justify-start items-center -my-[6.5px] h-16 rounded-lg p-6 border-b-[1.5px] hover:bg-[#e7ebec] border-gray-200 cursor-pointer ${
+                              selectedCandidates.includes(candidate._id)
+                                ? "bg-[#d9e5e7]"
+                                : ""
+                            }`}
+                            onClick={() => handleCandidateSelect(candidate._id)} // Handle selection on click
+                          >
+                            <Checkbox
+                              checked={selectedCandidates.includes(
+                                candidate._id
+                              )}
+                              onChange={() =>
+                                handleCandidateSelect(candidate._id)
+                              }
+                              style={{ display: "none" }} // Hide the checkbox
                             />
-                          ) : (
-                            <div className="bg-slate-200 rounded-lg w-10 h-10 flex justify-center items-center mr-4">
-                              <DefaultProfile />
+                            {candidate.profilePicture ? (
+                              <img
+                                src={candidate.profilePicture}
+                                alt={`${candidate.registerNumber}'s profile`}
+                                className="w-10 h-10 bg-slate-400 p-2.5 rounded-lg mr-4"
+                              />
+                            ) : (
+                              <div className="bg-slate-200 rounded-lg w-10 h-10 flex justify-center items-center mr-4">
+                                <DefaultProfile />
+                              </div>
+                            )}
+                            <div className="flex flex-col justify-between items-start flex-grow">
+                              <text className="poppins2 text-[15px] text-black">{`${candidate.registerNumber} - ${candidate.email}`}</text>
+                              <text className="montserrat text-[14px] text-gray-500">
+                                {`${candidate.dob || "DOB not available"} - ${
+                                  candidate.phone || "Phone not available"
+                                }`}
+                              </text>
                             </div>
-                          )}
-                          <div className="flex flex-col justify-between items-start flex-grow">
-                            <text className="poppins2 text-[15px] text-black">{`${candidate.registerNumber} - ${candidate.email}`}</text>
-                            <text className="montserrat text-[14px] text-gray-500">
-                              {`${candidate.dob || "DOB not available"} - ${
-                                candidate.phone || "Phone not available"
-                              }`}
-                            </text>
+                            {selectedCandidates.includes(candidate._id) && (
+                              <Button
+                                href=""
+                                type="primary"
+                                style={{
+                                  backgroundColor: "#083344",
+                                  borderColor: "#083344",
+                                  color: "white",
+                                  marginLeft: "auto",
+                                  borderRadius: "5px",
+                                  height: "36px",
+                                  padding: 0,
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCandidateSelect(candidate._id); // Use candidate._id correctly
+                                }}
+                              >
+                                ✔
+                              </Button>
+                            )}
                           </div>
-                          {selectedCandidates.includes(candidate._id) && (
-                            <Button
-                              href="#"
-                              type="primary"
-                              style={{
-                                backgroundColor: "#083344",
-                                borderColor: "#083344",
-                                color: "white",
-                                marginLeft: "auto",
-                                borderRadius: "5px",
-                                height: "36px",
-                                padding: 0,
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCandidateSelect(candidate._id); // Use candidate._id correctly
-                              }}
-                            >
-                              ✔
-                            </Button>
-                          )}
-                        </div>
-                      </ListItem>
-                    ))}
-                  </List>
+                        </ListItem>
+                      ))}
+                    </List>
+                  </div>
                 </div>
               </Modal>
             </>
@@ -773,15 +778,15 @@ const Home = () => {
                             Correct Answer:
                           </h1>
                           <p className="mt-1 w-full bg-[#dbe2e5] text-[#083344] rounded-lg px-5 py-2 gap-0.5 justify-start flex flex-col">
-                            {questions[viewQuestionIndex].correctAnswerIndices
+                            {questions[viewQuestionIndex].correctAnswers
                               .length > 0 ? (
-                              questions[
-                                viewQuestionIndex
-                              ].correctAnswerIndices.map((i) => (
-                                <li className="list-disc" key={i}>
-                                  {questions[viewQuestionIndex].options[i]}
-                                </li>
-                              ))
+                              questions[viewQuestionIndex].correctAnswers.map(
+                                (i) => (
+                                  <li className="list-disc" key={i}>
+                                    {questions[viewQuestionIndex].options[i]}
+                                  </li>
+                                )
+                              )
                             ) : (
                               <span>N/A</span>
                             )}
@@ -882,7 +887,9 @@ const Home = () => {
                                   boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
                                 }}
                                 className="h-[40px] mt-1"
-                                value={editingQuestion.correctAnswerIndices}
+                                value={editingQuestion.correctAnswers.map(
+                                  Number
+                                )}
                                 onChange={(selectedIndices) =>
                                   handleCorrectAnswerSelect(selectedIndices)
                                 }
@@ -899,7 +906,9 @@ const Home = () => {
                           ) : (
                             <Form.Item>
                               <Select
-                                value={editingQuestion.correctAnswerIndices[0]}
+                                value={Number(
+                                  editingQuestion.correctAnswers[0]
+                                )}
                                 onChange={(selectedIndex) =>
                                   handleCorrectAnswerSelect([selectedIndex])
                                 }
@@ -944,28 +953,36 @@ const Home = () => {
           )}
 
           <div className="w-full flex justify-between gap-3 items-center">
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={resetForm}
-              style={{
-                width: "100%",
-                marginBottom: "20px",
-                marginTop: "20px",
-                background: "#8298a2",
-                color: "#fff",
-              }}
+            <Popconfirm
+              title="Are you sure you want to reset all the test details?"
+              onConfirm={resetForm} // Call resetForm on confirm
+              onCancel={() => console.log("Reset cancelled")} // Log if cancelled
+              okText="Yes, Reset"
+              cancelText="Cancel"
+              placement="topRight" // Optional: Set placement for where the popconfirm appears
             >
-              <p
-                className="poppins text-[15px] px-0.5 normal-case text-white"
+              <Button
+                variant="contained"
+                color="primary"
                 style={{
-                  textDecorationThickness: "1.5px",
-                  textUnderlineOffset: "2px",
+                  width: "100%",
+                  marginBottom: "20px",
+                  marginTop: "20px",
+                  background: "#8298a2",
+                  color: "#fff",
                 }}
               >
-                Reset Test Details
-              </p>
-            </Button>
+                <p
+                  className="poppins text-[15px] px-0.5 normal-case text-white"
+                  style={{
+                    textDecorationThickness: "1.5px",
+                    textUnderlineOffset: "2px",
+                  }}
+                >
+                  Reset Test Details
+                </p>
+              </Button>
+            </Popconfirm>
             <Button
               variant="contained"
               color="primary"

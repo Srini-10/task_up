@@ -360,7 +360,6 @@ const QuestionComponent: React.FC = () => {
       }
 
       try {
-        console.log("Submitting selectedAnswers:", selectedAnswers);
         // Prepare answers array
         const answers = Object.entries(selectedAnswers).map(
           ([questionId, selectedAnswer]) => {
@@ -420,8 +419,6 @@ const QuestionComponent: React.FC = () => {
         );
 
         setIsSubmissionSuccessful(true);
-
-        console.log("Response from server:", answers);
 
         // Store submission status in localStorage
         localStorage.setItem("isTestSubmitted", "true");
@@ -711,45 +708,17 @@ const QuestionComponent: React.FC = () => {
     }
   };
 
-  const handleInputChange = (
-    questionId: string,
-    answer: number | string | number[]
-  ) => {
-    console.log("Updating questionId:", questionId, "with answer:", answer);
-
-    // Ensure answer is an array, even for single answers
-    const formattedAnswer = Array.isArray(answer) ? answer : [answer];
+  const handleInputChange = (questionId: string, answer: number | number[]) => {
+    // Ensure answer is always a valid number or number array
+    if (Array.isArray(answer)) {
+      answer = answer.filter((item) => typeof item === "number");
+    }
 
     // Update selectedAnswers for the specific questionId
-    setSelectedAnswers((prevAnswers) => {
-      const updatedAnswers = {
-        ...prevAnswers,
-        [questionId]: formattedAnswer, // Store the answer in array format
-      };
-      console.log("Updated selectedAnswers:", updatedAnswers);
-      return updatedAnswers;
-    });
-  };
-
-  // For Single Answer Inputs like Radio and Select
-  const handleSingleAnswerChange = (
-    questionId: string,
-    answer: number | string
-  ) => {
-    handleInputChange(questionId, [answer]); // Wrap the single answer in an array
-  };
-
-  // For Multiple Choice Inputs like Checkboxes
-  const handleMultipleChoiceChange = (
-    questionId: string,
-    index: number,
-    isChecked: boolean
-  ) => {
-    const currentAnswers = selectedAnswers[questionId] || []; // Get current answers or an empty array
-    const newAnswers = isChecked
-      ? [...currentAnswers, index] // Add index if checked
-      : currentAnswers.filter((ans: number) => ans !== index); // Remove if unchecked
-    handleInputChange(questionId, newAnswers); // Update answers in array format
+    setSelectedAnswers((prevAnswers) => ({
+      ...prevAnswers,
+      [questionId]: answer,
+    }));
   };
 
   useEffect(() => {
@@ -1454,8 +1423,7 @@ const QuestionComponent: React.FC = () => {
                                           )
                                         }
                                         value={
-                                          selectedAnswers[question._id]?.[0] ||
-                                          ""
+                                          selectedAnswers[question._id] || ""
                                         }
                                         className="w-full h-[40vh] focus:outline-none resize-none"
                                       />
@@ -1464,11 +1432,9 @@ const QuestionComponent: React.FC = () => {
                                     {/* Select Dropdown */}
                                     {question.inputType === "Select" && (
                                       <Select
-                                        value={
-                                          selectedAnswers[question._id]?.[0]
-                                        }
+                                        value={selectedAnswers[question._id]}
                                         onChange={(e) =>
-                                          handleSingleAnswerChange(
+                                          handleInputChange(
                                             question._id,
                                             e.target.value
                                           )
@@ -1477,8 +1443,8 @@ const QuestionComponent: React.FC = () => {
                                         style={{ marginTop: "10px" }}
                                         displayEmpty
                                         renderValue={(selected) =>
-                                          typeof selected === "number" ? (
-                                            question.options[selected] // Display the corresponding option text for the index
+                                          selected ? (
+                                            selected
                                           ) : (
                                             <p className="text-gray-500">
                                               Select answer
@@ -1500,9 +1466,10 @@ const QuestionComponent: React.FC = () => {
                                         </MenuItem>
                                         {question.options.map(
                                           (option, index) => (
-                                            <MenuItem key={index} value={index}>
-                                              {" "}
-                                              {/* Use index as the value */}
+                                            <MenuItem
+                                              key={index}
+                                              value={option}
+                                            >
                                               {option}
                                             </MenuItem>
                                           )
@@ -1514,11 +1481,9 @@ const QuestionComponent: React.FC = () => {
                                     {question.inputType === "Radio" && (
                                       <RadioGroup
                                         className="h-[40vh]"
-                                        value={
-                                          selectedAnswers[question._id]?.[0]
-                                        }
+                                        value={selectedAnswers[question._id]}
                                         onChange={(e) =>
-                                          handleSingleAnswerChange(
+                                          handleInputChange(
                                             question._id,
                                             e.target.value
                                           )
@@ -1549,16 +1514,45 @@ const QuestionComponent: React.FC = () => {
                                               key={index}
                                               control={
                                                 <BpCheckbox
-                                                  checked={selectedAnswers[
-                                                    question._id
-                                                  ]?.includes(index)}
-                                                  onChange={(e) =>
-                                                    handleMultipleChoiceChange(
-                                                      question._id,
-                                                      index,
-                                                      e.target.checked
-                                                    )
+                                                  checked={
+                                                    Array.isArray(
+                                                      selectedAnswers[
+                                                        question._id
+                                                      ]
+                                                    ) &&
+                                                    selectedAnswers[
+                                                      question._id
+                                                    ].includes(index) // Use numeric index
                                                   }
+                                                  onChange={(e) => {
+                                                    const currentAnswers =
+                                                      Array.isArray(
+                                                        selectedAnswers[
+                                                          question._id
+                                                        ]
+                                                      )
+                                                        ? [
+                                                            ...selectedAnswers[
+                                                              question._id
+                                                            ],
+                                                          ]
+                                                        : [];
+
+                                                    const newAnswers = e.target
+                                                      .checked
+                                                      ? [
+                                                          ...currentAnswers,
+                                                          index,
+                                                        ] // Add index (number) to array
+                                                      : currentAnswers.filter(
+                                                          (ans) => ans !== index
+                                                        );
+
+                                                    handleInputChange(
+                                                      question._id,
+                                                      newAnswers
+                                                    ); // Update state
+                                                  }}
                                                 />
                                               }
                                               label={option}

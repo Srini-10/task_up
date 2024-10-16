@@ -8,9 +8,11 @@ import {
   TableRow,
   TableCell,
   Box,
+  Tab,
 } from "@mui/material";
 import { Spin } from "antd";
 import axios from "axios";
+import * as XLSX from "xlsx";
 
 // Define the types
 interface Test {
@@ -36,7 +38,7 @@ interface Answer {
 
 interface Ranking {
   registerNumber: string;
-  email: string; // Ensure email is included in Ranking interface
+  email: string;
   marks: number;
   submissionTime: Date;
   malpractice: string;
@@ -52,20 +54,69 @@ const Dashboard: React.FC = () => {
   const [selectedTestId, setSelectedTestId] = useState<string | null>(null);
   console.log(selectedTestId);
 
+  const handleDownload = () => {
+    const workbook = XLSX.utils.book_new();
+
+    // Create an array of table data
+    const data = [
+      [
+        "S.No",
+        "Register Number",
+        "Email",
+        "Submission Time",
+        "Marks",
+        "Malpractice",
+        "Questions",
+        ...uniqueQuestions,
+      ],
+    ];
+
+    // Add table rows to the data array
+    rankings.forEach((ranking, index) => {
+      const row = [
+        index + 1,
+        ranking.registerNumber,
+        ranking.email,
+        `${formatDateTime(ranking.submissionTime.toString()).date} ${
+          formatDateTime(ranking.submissionTime.toString()).time
+        }`,
+        ranking.marks,
+        ranking.malpractice === "true" ? "Malpractice" : "Genuine",
+      ];
+
+      // Append answers for each unique question
+      uniqueQuestions.forEach((questionText) => {
+        const answer = ranking.answers.find(
+          (a) => a.questionText === questionText
+        );
+        row.push(answer ? answer.selectedAnswer : "N/A");
+      });
+
+      data.push(row);
+    });
+
+    // Convert the data to a worksheet
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+    // Add the worksheet to the workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Rankings");
+
+    // Trigger the download
+    XLSX.writeFile(workbook, "rankings.xlsx");
+  };
+
   // Fetch all tests when the component mounts
   useEffect(() => {
     const fetchTests = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(
-          "https://taskup-backend.vercel.app/api/tests"
-        );
+        const response = await axios.get("http://localhost:20000/api/tests");
         const testsData: Test[] = response.data;
 
         const testsWithSubmissionsCount = await Promise.all(
           testsData.map(async (test) => {
             const submissionsResponse = await axios.get(
-              `https://taskup-backend.vercel.app/api/tests/${test._id}/submissions-count`
+              `http://localhost:20000/api/tests/${test._id}/submissions-count`
             );
             return {
               ...test,
@@ -89,7 +140,7 @@ const Dashboard: React.FC = () => {
   const fetchRankings = async (testId: string) => {
     try {
       const response = await axios.get(
-        `https://taskup-backend.vercel.app/api/tests/${testId}/ranking`
+        `http://localhost:20000/api/tests/${testId}/ranking`
       );
       const rankingData: Ranking[] = response.data;
 
@@ -212,99 +263,123 @@ const Dashboard: React.FC = () => {
                   boxShadow: 24,
                   p: 4,
                   borderRadius: 2,
-                  width: "80%",
-                  maxHeight: "80%",
-                  overflowY: "auto",
+                  width: "80vw",
+                  maxHeight: "80vh",
+                  minHeight: "80vh",
+                  overflowY: "scroll",
+                  justifyContent: "space-between",
+                  display: "flex",
+                  flexDirection: "column",
                 }}
               >
-                <h2>Top Rankings</h2>
-
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>
-                        <b>Register Number</b>
-                      </TableCell>
-                      <TableCell>
-                        <b>Email</b>
-                      </TableCell>
-                      <TableCell>
-                        <b>Submission Time</b>
-                      </TableCell>
-                      <TableCell>
-                        <b>Marks</b>
-                      </TableCell>
-                      <TableCell>
-                        <b>Malpractice</b>
-                      </TableCell>
-                      <TableCell>
-                        <b>Questions:</b>
-                      </TableCell>
-                      {/* Dynamically generated headers for questions */}
-                      {uniqueQuestions.map((questionText, index) => (
-                        <TableCell key={index}>
-                          <b className="font-medium">
-                            {index + 1}
-                            {"."}
-                            {questionText}
-                          </b>
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {rankings && rankings.length > 0 ? (
-                      rankings.map((ranking, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{ranking.registerNumber}</TableCell>
-                          <TableCell>{ranking.email}</TableCell>
-                          <TableCell>
-                            {
-                              formatDateTime(ranking.submissionTime.toString())
-                                .date
-                            }
-                            {` `}
-                            {
-                              formatDateTime(ranking.submissionTime.toString())
-                                .time
-                            }
+                <div className="">
+                  <h2 className="poppins2 text-[23px] text-[#083344]">
+                    Top Rankings
+                  </h2>
+                  <div className="overflow-x-scroll h-[54%] mt-6">
+                    <Table className="">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ whiteSpace: "nowrap" }}>
+                            <b>S.No</b>
                           </TableCell>
-                          <TableCell>{ranking.marks}</TableCell>
-                          <TableCell>
-                            {ranking.malpractice === "true"
-                              ? "Malpractice"
-                              : "Genuine"}
+                          <TableCell sx={{ whiteSpace: "nowrap" }}>
+                            <b>Register Number</b>
                           </TableCell>
-                          <TableCell></TableCell>
-                          {/* Display answers in corresponding question columns */}
-                          {uniqueQuestions.map((questionText, qIndex) => {
-                            const answer = ranking.answers.find(
-                              (a) => a.questionText === questionText
-                            );
-                            return (
-                              <TableCell key={qIndex}>
-                                {answer ? answer.selectedAnswer : "N/A"}
-                              </TableCell>
-                            );
-                          })}
+                          <TableCell sx={{ whiteSpace: "nowrap" }}>
+                            <b>Email</b>
+                          </TableCell>
+                          <TableCell sx={{ whiteSpace: "nowrap" }}>
+                            <b>Submission Time</b>
+                          </TableCell>
+                          <TableCell sx={{ whiteSpace: "nowrap" }}>
+                            <b>Marks</b>
+                          </TableCell>
+                          <TableCell sx={{ whiteSpace: "nowrap" }}>
+                            <b>Malpractice</b>
+                          </TableCell>
+                          <TableCell sx={{ whiteSpace: "nowrap" }}>
+                            <b>Questions:</b>
+                          </TableCell>
+                          {uniqueQuestions.map((questionText, index) => (
+                            <TableCell
+                              key={index}
+                              sx={{ whiteSpace: "nowrap" }}
+                            >
+                              <b>
+                                {index + 1}. {questionText}
+                              </b>
+                            </TableCell>
+                          ))}
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={6}>No rankings available</TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                      </TableHead>
+                      <TableBody>
+                        {rankings && rankings.length > 0 ? (
+                          rankings.map((ranking, index) => (
+                            <TableRow key={index}>
+                              <TableCell>{index + 1}</TableCell>
+                              <TableCell>{ranking.registerNumber}</TableCell>
+                              <TableCell>{ranking.email}</TableCell>
+                              <TableCell>
+                                {`${
+                                  formatDateTime(
+                                    ranking.submissionTime.toString()
+                                  ).date
+                                } ${
+                                  formatDateTime(
+                                    ranking.submissionTime.toString()
+                                  ).time
+                                }`}
+                              </TableCell>
+                              <TableCell>{ranking.marks}</TableCell>
+                              <TableCell>
+                                {ranking.malpractice === "true"
+                                  ? "Malpractice"
+                                  : "Genuine"}
+                              </TableCell>
+                              <TableCell></TableCell>
+                              {uniqueQuestions.map((questionText, qIndex) => {
+                                const answer = ranking.answers.find(
+                                  (a) => a.questionText === questionText
+                                );
+                                return (
+                                  <TableCell key={qIndex}>
+                                    {answer ? answer.selectedAnswer : "N/A"}
+                                  </TableCell>
+                                );
+                              })}
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={6}>
+                              No rankings available
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
 
-                <Button
-                  onClick={handleCloseModal}
-                  variant="contained"
-                  color="primary"
-                  sx={{ marginTop: "20px" }}
-                >
-                  Close
-                </Button>
+                <div className="flex justify-end items-end">
+                  <Button
+                    onClick={handleCloseModal}
+                    variant="contained"
+                    color="primary"
+                    sx={{ marginTop: "20px", marginRight: "10px" }}
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    onClick={handleDownload}
+                    variant="contained"
+                    color="secondary"
+                    sx={{ marginTop: "20px" }}
+                  >
+                    Download Excel
+                  </Button>
+                </div>
               </Box>
             </Modal>
           </div>

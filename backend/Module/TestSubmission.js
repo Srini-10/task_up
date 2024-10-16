@@ -5,19 +5,20 @@ const testSubmissionSchema = new mongoose.Schema({
   registerNumber: { type: String, required: true },
   type: Map,
   of: mongoose.Schema.Types.Mixed,
+  email: { type: String, required: true },
   questions: [
     {
       _id: String,
       questionText: String,
       options: [String],
-      answers: [String],
+      correctAnswers: [Number],
     },
   ],
   answers: [
     {
       questionId: String,
       questionText: String,
-      selectedAnswer: [String],
+      selectedAnswer: [Number],
     },
   ],
   score: { type: Number, required: true },

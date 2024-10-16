@@ -30,7 +30,7 @@ type Question = {
   questionText: string;
   inputType: string;
   options: string[];
-  correctAnswerIndices: any[];
+  correctAnswers: any[];
 };
 const EditTest = () => {
   const { testId } = useParams();
@@ -89,7 +89,7 @@ const EditTest = () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        "https://taskup-backend.vercel.app/api/testCandidates"
+        "http://localhost:20000/api/testCandidates"
       );
       setCandidates(response.data);
       console.log(response.data);
@@ -133,7 +133,7 @@ const EditTest = () => {
     const fetchTestDetails = async () => {
       try {
         const response = await axios.get(
-          `https://taskup-backend.vercel.app/api/tests/${testId}`
+          `http://localhost:20000/api/tests/${testId}`
         );
         const test = response.data;
 
@@ -235,8 +235,7 @@ const EditTest = () => {
         questionText: q.questionText,
         inputType: q.inputType,
         options: q.options,
-        correctAnswerIndices:
-          q.correctAnswerIndices.length > 0 ? q.correctAnswerIndices : null,
+        correctAnswers: q.correctAnswers.length > 0 ? q.correctAnswers : null,
       })),
       candidates: selectedCandidateData,
       malpractice: false,
@@ -244,7 +243,7 @@ const EditTest = () => {
 
     try {
       await axios.put(
-        `https://taskup-backend.vercel.app/api/tests/${testId}`,
+        `http://localhost:20000/api/tests/${testId}`,
         updatedTestData
       );
       showToast("Test updated successfully!");
@@ -346,10 +345,10 @@ const EditTest = () => {
   };
 
   const handleCorrectAnswerSelect = (selectedIndices) => {
-    // Ensure correctAnswerIndices is an array
+    // Ensure correctAnswers is an array
     setEditingQuestion((prev) => ({
       ...prev,
-      correctAnswerIndices: Array.isArray(selectedIndices)
+      correctAnswers: Array.isArray(selectedIndices)
         ? selectedIndices
         : [selectedIndices],
     }));
@@ -363,7 +362,7 @@ const EditTest = () => {
     setEditingQuestion((prev) => ({
       ...prev,
       inputType: newInputType,
-      correctAnswerIndices: [],
+      correctAnswers: [],
     }));
   };
 
@@ -505,9 +504,9 @@ const EditTest = () => {
                         Correct Answer:
                       </h1>
                       <p className="mt-1 w-full bg-[#dbe2e5] text-[#083344] rounded-lg px-5 py-2 gap-0.5 justify-start flex flex-col">
-                        {questions[viewQuestionIndex].correctAnswerIndices
-                          .length > 0 ? (
-                          questions[viewQuestionIndex].correctAnswerIndices.map(
+                        {questions[viewQuestionIndex].correctAnswers.length >
+                        0 ? (
+                          questions[viewQuestionIndex].correctAnswers.map(
                             (i) => (
                               <li className="list-disc" key={i}>
                                 {questions[viewQuestionIndex].options[i]}
@@ -612,7 +611,7 @@ const EditTest = () => {
                               boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
                             }}
                             className="h-[40px] mt-1"
-                            value={editingQuestion.correctAnswerIndices}
+                            value={editingQuestion.correctAnswers}
                             onChange={(selectedIndices) =>
                               handleCorrectAnswerSelect(selectedIndices)
                             }
@@ -627,7 +626,7 @@ const EditTest = () => {
                       ) : (
                         <Form.Item>
                           <Select
-                            value={editingQuestion.correctAnswerIndices[0]}
+                            value={editingQuestion.correctAnswers[0]}
                             onChange={(selectedIndex) =>
                               handleCorrectAnswerSelect([selectedIndex])
                             }
@@ -823,71 +822,75 @@ const EditTest = () => {
                     </div>
                   </div>
 
-                  {loading ? (
-                    <div className="z-50 w-full h-full flex justify-center items-center">
-                      <Spin size="large" className="custom-spin" />
-                    </div>
-                  ) : (
-                    <List>
-                      {filteredCandidates.map((candidate: Candidate) => (
-                        <ListItem key={candidate._id} className="items-start">
-                          <div
-                            className={`w-full flex justify-start items-center -my-[6.5px] h-16 rounded-lg p-6 border-b-[1.5px] hover:bg-[#e7ebec] border-gray-200 cursor-pointer ${
-                              selectedCandidates.includes(candidate._id)
-                                ? "bg-[#d9e5e7]"
-                                : ""
-                            }`}
-                            onClick={() => handleCandidateSelect(candidate._id)} // Handle selection on click
-                          >
-                            <Checkbox
-                              checked={selectedCandidates.includes(
-                                candidate._id
-                              )}
-                              onChange={() =>
+                  <div className="overflow-y-scroll">
+                    {loading ? (
+                      <div className="z-50 w-full h-full flex justify-center items-center">
+                        <Spin size="large" className="custom-spin" />
+                      </div>
+                    ) : (
+                      <List>
+                        {filteredCandidates.map((candidate: Candidate) => (
+                          <ListItem key={candidate._id} className="items-start">
+                            <div
+                              className={`w-full flex justify-start items-center -my-[6.5px] h-16 rounded-lg p-6 border-b-[1.5px] hover:bg-[#e7ebec] border-gray-200 cursor-pointer ${
+                                selectedCandidates.includes(candidate._id)
+                                  ? "bg-[#d9e5e7]"
+                                  : ""
+                              }`}
+                              onClick={() =>
                                 handleCandidateSelect(candidate._id)
-                              }
-                              style={{ display: "none" }} // Hide the checkbox
-                            />
-                            <img
-                              src={
-                                candidate.profilePicture
-                                  ? candidate.profilePicture
-                                  : DefaultProfile
-                              }
-                              alt={`${candidate.registerNumber}'s profile`}
-                              className="w-10 h-10 bg-slate-400 p-2.5 rounded-lg mr-4"
-                            />
-                            <div className="flex flex-col justify-between items-start flex-grow">
-                              <text className="poppins2 text-[15px] text-black">{`${candidate.registerNumber} - ${candidate.email}`}</text>
-                              <text className="montserrat text-[14px] text-gray-500">
-                                {`${candidate.dob || "DOB not available"} - ${
-                                  candidate.phone || "Phone not available"
-                                }`}
-                              </text>
+                              } // Handle selection on click
+                            >
+                              <Checkbox
+                                checked={selectedCandidates.includes(
+                                  candidate._id
+                                )}
+                                onChange={() =>
+                                  handleCandidateSelect(candidate._id)
+                                }
+                                style={{ display: "none" }} // Hide the checkbox
+                              />
+                              <img
+                                src={
+                                  candidate.profilePicture
+                                    ? candidate.profilePicture
+                                    : DefaultProfile
+                                }
+                                alt={`${candidate.registerNumber}'s profile`}
+                                className="w-10 h-10 bg-slate-400 p-2.5 rounded-lg mr-4"
+                              />
+                              <div className="flex flex-col justify-between items-start flex-grow">
+                                <text className="poppins2 text-[15px] text-black">{`${candidate.registerNumber} - ${candidate.email}`}</text>
+                                <text className="montserrat text-[14px] text-gray-500">
+                                  {`${candidate.dob || "DOB not available"} - ${
+                                    candidate.phone || "Phone not available"
+                                  }`}
+                                </text>
+                              </div>
+                              {selectedCandidates.includes(candidate._id) && ( // Conditionally render the button
+                                <Button
+                                  type="primary"
+                                  shape="circle"
+                                  style={{
+                                    backgroundColor: "#083344",
+                                    borderColor: "#083344",
+                                    color: "white",
+                                    marginLeft: "auto", // Align button to the right
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation(); // Prevent click from triggering the list item click
+                                    handleCandidateSelect(candidate._id); // Handle check action
+                                  }}
+                                >
+                                  ✔
+                                </Button>
+                              )}
                             </div>
-                            {selectedCandidates.includes(candidate._id) && ( // Conditionally render the button
-                              <Button
-                                type="primary"
-                                shape="circle"
-                                style={{
-                                  backgroundColor: "#083344",
-                                  borderColor: "#083344",
-                                  color: "white",
-                                  marginLeft: "auto", // Align button to the right
-                                }}
-                                onClick={(e) => {
-                                  e.stopPropagation(); // Prevent click from triggering the list item click
-                                  handleCandidateSelect(candidate._id); // Handle check action
-                                }}
-                              >
-                                ✔
-                              </Button>
-                            )}
-                          </div>
-                        </ListItem>
-                      ))}
-                    </List>
-                  )}
+                          </ListItem>
+                        ))}
+                      </List>
+                    )}
+                  </div>
                 </div>
               </Modal>
             </>

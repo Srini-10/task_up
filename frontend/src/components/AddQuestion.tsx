@@ -8,7 +8,7 @@ const AddQuestion = ({ questions, setQuestions }) => {
   const [questionText, setQuestionText] = useState("");
   const [questionType, setQuestionType] = useState(""); // State for question type
   const [options, setOptions] = useState(["", "", "", ""]); // Start with 4 empty options
-  const [correctAnswerIndices, setCorrectAnswerIndices] = useState([]); // Array to store correct answer indices
+  const [correctAnswers, setCorrectAnswers] = useState([]); // Array to store correct answer indices
 
   // Available question types
   const questionTypes = ["Multiple Choice", "Select", "Radio", "Text Input"];
@@ -19,11 +19,11 @@ const AddQuestion = ({ questions, setQuestions }) => {
       questionText,
       inputType: questionType,
       options: questionType !== "Text Input" ? options : [],
-      correctAnswerIndices:
+      correctAnswers:
         questionType === "Multiple Choice"
-          ? correctAnswerIndices
-          : correctAnswerIndices.length > 0
-          ? [correctAnswerIndices[0]] // Single correct answer for Select/Radio
+          ? correctAnswers
+          : correctAnswers.length > 0
+          ? [correctAnswers[0]] // Single correct answer for Select/Radio
           : [],
     };
 
@@ -33,7 +33,7 @@ const AddQuestion = ({ questions, setQuestions }) => {
     setQuestionText("");
     setQuestionType("");
     setOptions(["", "", "", ""]);
-    setCorrectAnswerIndices([]);
+    setCorrectAnswers([]);
   };
 
   // Handle change in the options array
@@ -46,9 +46,9 @@ const AddQuestion = ({ questions, setQuestions }) => {
   // Handle selection of correct answers
   const handleCorrectAnswerChange = (value) => {
     if (questionType === "Multiple Choice") {
-      setCorrectAnswerIndices(value); // Allow multiple correct answers
+      setCorrectAnswers(value); // Allow multiple correct answers
     } else if (questionType === "Select" || questionType === "Radio") {
-      setCorrectAnswerIndices([value]); // Only allow a single correct answer
+      setCorrectAnswers([value]); // Only allow a single correct answer
     }
   };
 
@@ -79,7 +79,7 @@ const AddQuestion = ({ questions, setQuestions }) => {
           <Select
             className="w-full min-h-[40px] -mt-1"
             mode="multiple"
-            value={correctAnswerIndices}
+            value={correctAnswers}
             onChange={handleCorrectAnswerChange}
             placeholder="Correct Answers"
           >
@@ -96,11 +96,7 @@ const AddQuestion = ({ questions, setQuestions }) => {
         <Form.Item className="mt-3" label="Select Correct Answers">
           <Select
             className="w-full min-h-[40px] -mt-1"
-            value={
-              correctAnswerIndices.length > 0
-                ? correctAnswerIndices[0]
-                : undefined
-            }
+            value={correctAnswers.length > 0 ? correctAnswers[0] : undefined}
             onChange={handleCorrectAnswerChange}
             placeholder="Correct Answer"
           >

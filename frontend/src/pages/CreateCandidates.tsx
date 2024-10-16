@@ -19,6 +19,7 @@ import { PlusIcon } from "./NextUI/PlusIcon";
 import { VerticalDotsIcon } from "./NextUI/VerticalDotsIcon";
 
 type Candidate = {
+  _id: string;
   registerNumber: string;
   dob: string;
   email: string;
@@ -33,10 +34,16 @@ export default function CreateCandidates() {
   const [rowsPerPage] = useState(5);
   const [isAddVisible, setAddVisible] = useState(false);
   const [isEditVisible, setEditVisible] = useState(false);
-  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(
-    null
-  );
+  const [selectedCandidate, setSelectedCandidate] = useState<Candidate>({
+    _id: "",
+    registerNumber: "",
+    dob: "",
+    email: "",
+    phone: "",
+    profilePicture: "",
+  });
   const [newCandidate, setNewCandidate] = useState<Candidate>({
+    _id: "",
     registerNumber: "",
     dob: "",
     email: "",
@@ -48,12 +55,20 @@ export default function CreateCandidates() {
     null
   );
 
+  const confirmDelete = (candidateId: string) => {
+    Modal.confirm({
+      title: "Confirm Deletion",
+      content: "Are you sure you want to delete this candidate?",
+      onOk: () => handleDelete(candidateId),
+    });
+  };
+
   // Fetch data from the API
   useEffect(() => {
     const fetchCandidates = async () => {
       try {
         const response = await fetch(
-          "https://taskup-backend.vercel.app/api/testCandidates"
+          "http://localhost:20000/api/testCandidates"
         );
         const data = await response.json();
         setCandidates(data);
@@ -63,7 +78,7 @@ export default function CreateCandidates() {
           // Check if the candidate has a profile picture
           if (candidate.profilePicture) {
             // Construct the image URL assuming the backend serves images from /uploads folder
-            const profilePictureURL = `https://taskup-backend.vercel.app/uploads/${candidate.profilePicture}`;
+            const profilePictureURL = `http://localhost:20000/uploads/${candidate.profilePicture}`;
             console.log(
               `Candidate ${candidate.registerNumber} Profile Picture:`,
               profilePictureURL
@@ -101,7 +116,7 @@ export default function CreateCandidates() {
       formData.append("profilePicture", file);
 
       const response = await fetch(
-        "https://taskup-backend.vercel.app/uploadProfilePicture",
+        "http://localhost:20000/uploadProfilePicture",
         {
           method: "POST",
           body: formData,
@@ -134,7 +149,7 @@ export default function CreateCandidates() {
       };
 
       const response = await fetch(
-        "https://taskup-backend.vercel.app/api/testCandidates",
+        "http://localhost:20000/api/testCandidates",
         {
           method: "POST",
           headers: {
@@ -158,13 +173,90 @@ export default function CreateCandidates() {
     setProfilePictureFile(null);
   };
 
+  const handleDelete = async (candidateId: string) => {
+    try {
+      const response = await fetch(
+        `http://localhost:20000/api/testCandidates/${candidateId}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (response.ok) {
+        const updatedCandidates = candidates.filter(
+          (candidate) => candidate._id !== candidateId
+        );
+        setCandidates(updatedCandidates); // Update the list of candidates after deletion
+        console.log("Candidate deleted successfully");
+      } else {
+        const errorData = await response.text();
+        console.error("Error deleting candidate:", errorData);
+      }
+    } catch (error) {
+      console.error("Error deleting candidate:", error);
+    }
+  };
+
+  const handleEditSave = async () => {
+    try {
+      // Prepare the form data to include candidate details and profile picture
+      const formData = new FormData();
+      formData.append("registerNumber", selectedCandidate.registerNumber);
+      formData.append("dob", selectedCandidate.dob);
+      formData.append("email", selectedCandidate.email);
+      formData.append("phone", selectedCandidate.phone);
+
+      // Add profile picture to form data if a new file is uploaded
+      if (profilePictureFile) {
+        formData.append("profilePicture", profilePictureFile);
+      }
+
+      const response = await fetch(
+        `http://localhost:20000/api/testCandidates/${selectedCandidate._id}`,
+        {
+          method: "PUT",
+          body: formData,
+        }
+      );
+
+      // Check if the response is okay
+      if (response.ok) {
+        const contentType = response.headers.get("Content-Type");
+
+        if (contentType && contentType.includes("application/json")) {
+          const updatedData = await response.json();
+
+          // Check if the response contains a success message and updated candidate data
+          if (updatedData.message === "Candidate updated successfully") {
+            // Update the candidate in the candidates list
+            const updatedCandidates = candidates.map((candidate) =>
+              candidate._id === updatedData.candidate._id
+                ? updatedData.candidate
+                : candidate
+            );
+
+            setCandidates(updatedCandidates);
+            setEditVisible(false);
+            setProfilePictureFile(null);
+          }
+        } else {
+          const responseText = await response.text();
+          console.error("Unexpected response format:", responseText);
+        }
+      } else {
+        const errorData = await response.json();
+        console.error("Error updating candidate:", errorData.message);
+      }
+    } catch (error) {
+      console.error("Error updating candidate:", error);
+    }
+  };
+
   const filteredItems = React.useMemo(() => {
     let filteredCandidates = [...candidates];
     if (filterValue) {
-      filteredCandidates = filteredCandidates.filter((candidate) =>
-        candidate.registerNumber
-          .toLowerCase()
-          .includes(filterValue.toLowerCase())
+      filteredCandidates = filteredCandidates.filter(
+        (candidate) => candidate.registerNumber
       );
     }
     return filteredCandidates;
@@ -191,14 +283,16 @@ export default function CreateCandidates() {
             <Dropdown>
               <DropdownTrigger>
                 <Button isIconOnly radius="full" size="sm" variant="light">
-                  <VerticalDotsIcon />
+                  <VerticalDotsIcon width={undefined} height={undefined} />
                 </Button>
               </DropdownTrigger>
               <DropdownMenu>
                 <DropdownItem onClick={() => openEditModal(candidate)}>
                   Edit
                 </DropdownItem>
-                <DropdownItem>Delete</DropdownItem>
+                <DropdownItem onClick={() => confirmDelete(candidate._id)}>
+                  Delete
+                </DropdownItem>
               </DropdownMenu>
             </Dropdown>
           </div>
@@ -218,7 +312,7 @@ export default function CreateCandidates() {
   };
 
   return (
-    <div>
+    <div className="overflow-y-scroll h-full">
       <div className="flex flex-col gap-4 p-5">
         <Input
           isClearable
@@ -271,7 +365,7 @@ export default function CreateCandidates() {
         </TableBody>
       </Table>
 
-      <div className="py-2 px- flex justify-between items-center">
+      <div className="absolute z-50 right-10 bottom-5 py-3 px-3 bg-black shadow-md rounded-2xl flex justify-between items-center">
         <Pagination page={page} total={pages} onChange={setPage} />
       </div>
 
@@ -368,7 +462,7 @@ export default function CreateCandidates() {
               }
             />
 
-            <Button onClick={handleSave}>Save</Button>
+            <Button onClick={handleEditSave}>Save</Button>
           </>
         )}
       </Modal>
