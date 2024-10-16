@@ -14,7 +14,11 @@ function App() {
   // Check window width and update state accordingly
   useEffect(() => {
     const handleResize = () => {
-      setIsWideScreen(window.innerWidth > 1024);
+      const width = window.innerWidth;
+      const screenWidth = window.screen.width;
+
+      // Check if the window width is greater than 90% of the screen width
+      setIsWideScreen(width > screenWidth * 0.95);
     };
 
     // Add resize event listener
