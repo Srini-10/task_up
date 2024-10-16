@@ -54,13 +54,13 @@ const storage = multer.diskStorage({
 
 // const mongoURI = "mongodb://localhost:27017/sassDB";
 
-mongoose
-  .connect(mongoURI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((err) => console.error("MongoDB connection error:", err));
+// mongoose
+//   .connect(mongoURI, {
+//     useNewUrlParser: true,
+//     useUnifiedTopology: true,
+//   })
+//   .then(() => console.log("Connected to MongoDB"))
+//   .catch((err) => console.error("MongoDB connection error:", err));
 
 const upload = multer({ storage: storage });
 
