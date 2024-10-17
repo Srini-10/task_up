@@ -283,6 +283,13 @@ const Home = () => {
     }
   };
 
+  // const resetCandidate = () => {
+  // setCandidates([]);
+  // setSelectedCandidates([]);
+  //   localStorage.removeItem("candidates");
+  //   localStorage.removeItem("selectedCandidates");
+  // };
+
   const resetForm = () => {
     setTestName("");
     setStartDate("");
@@ -293,9 +300,14 @@ const Home = () => {
     setCandidates([]);
     setSelectedCandidates([]);
     setShowDetails(false);
+
+    // Remove items from localStorage
     localStorage.removeItem("candidates");
     localStorage.removeItem("questions");
     localStorage.removeItem("selectedCandidates");
+
+    // Refresh the page
+    window.location.reload(); // This will refresh the page
   };
 
   // Update localStorage whenever selected candidates change
@@ -590,6 +602,27 @@ const Home = () => {
                           {selectAll ? "Deselect All" : "Select All"}
                         </p>
                       </Button>
+                      {/* <Button
+                        href="#"
+                        type="primary"
+                        onClick={resetCandidate}
+                        style={{
+                          backgroundColor: "#8298a2",
+                          borderColor: "#083344",
+                          color: "white",
+                          marginLeft: "auto",
+                        }}
+                      >
+                        <p
+                          className="poppins2 text-[12px] px-0.5 normal-case text-white"
+                          style={{
+                            textDecorationThickness: "1.5px",
+                            textUnderlineOffset: "2px",
+                          }}
+                        >
+                          Refresh
+                        </p>
+                      </Button> */}
                     </div>
                   </div>
 

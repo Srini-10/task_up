@@ -3,17 +3,16 @@ import { Input, Form, Select } from "antd";
 import { Button } from "@mui/material";
 
 const { Option } = Select;
+const { TextArea } = Input;
 
 const AddQuestion = ({ questions, setQuestions }) => {
   const [questionText, setQuestionText] = useState("");
-  const [questionType, setQuestionType] = useState(""); // State for question type
-  const [options, setOptions] = useState(["", "", "", ""]); // Start with 4 empty options
-  const [correctAnswers, setCorrectAnswers] = useState<string[]>([]); // Initial state is an empty array of strings
+  const [questionType, setQuestionType] = useState("");
+  const [options, setOptions] = useState(["", "", "", ""]);
+  const [correctAnswers, setCorrectAnswers] = useState<string[]>([]);
 
-  // Available question types
   const questionTypes = ["Multiple Choice", "Select", "Radio", "Text Input"];
 
-  // Add a new question to the list
   const handleAddQuestion = () => {
     const newQuestion = {
       questionText,
@@ -23,42 +22,33 @@ const AddQuestion = ({ questions, setQuestions }) => {
         questionType === "Multiple Choice"
           ? correctAnswers
           : correctAnswers.length > 0
-          ? [correctAnswers[0]] // Single correct answer for Select/Radio
+          ? [correctAnswers[0]]
           : [],
     };
 
     setQuestions([...questions, newQuestion]);
-
-    // Reset fields after adding
     setQuestionText("");
     setQuestionType("");
     setOptions(["", "", "", ""]);
     setCorrectAnswers([]);
   };
 
-  // Handle change in the options array
   const handleOptionChange = (index, value) => {
     const updatedOptions = [...options];
     updatedOptions[index] = value;
     setOptions(updatedOptions);
   };
 
-  // Handle selection of correct answers
   const handleCorrectAnswerChange = (value) => {
     if (questionType === "Multiple Choice") {
-      setCorrectAnswers(value); // Allow multiple correct answers
+      setCorrectAnswers(value);
     } else if (questionType === "Select" || questionType === "Radio") {
-      setCorrectAnswers([value]); // Only allow a single correct answer
+      setCorrectAnswers([value]);
     }
   };
 
-  // Handle dynamic rendering of input fields based on question type
   const renderOptionsInput = () => {
-    if (
-      questionType === "Multiple Choice" ||
-      questionType === "Select" ||
-      questionType === "Radio"
-    ) {
+    if (["Multiple Choice", "Select", "Radio"].includes(questionType)) {
       return options.map((option, index) => (
         <Input
           className="w-full min-h-[40px] my-1"
@@ -68,10 +58,9 @@ const AddQuestion = ({ questions, setQuestions }) => {
         />
       ));
     }
-    return null; // No options for Text Input
+    return null;
   };
 
-  // Render the correct answer selection input
   const renderCorrectAnswerInput = () => {
     if (questionType === "Multiple Choice") {
       return (
@@ -91,9 +80,9 @@ const AddQuestion = ({ questions, setQuestions }) => {
           </Select>
         </Form.Item>
       );
-    } else if (questionType === "Select" || questionType === "Radio") {
+    } else if (["Select", "Radio"].includes(questionType)) {
       return (
-        <Form.Item className="mt-3" label="Select Correct Answers">
+        <Form.Item className="mt-3" label="Select Correct Answer">
           <Select
             className="w-full min-h-[40px] -mt-1"
             value={correctAnswers.length > 0 ? correctAnswers[0] : undefined}
@@ -112,39 +101,61 @@ const AddQuestion = ({ questions, setQuestions }) => {
     return null;
   };
 
+  // Updated splitText function to handle new patterns (`**`, `$$`, `%%`)
+  const splitText = (text) => {
+    const patterns = [
+      { regex: /`\*{([^%]+)}\*`/g, type: "code" },
+      { regex: /\*\*([^%]+)\*\*/g, type: "bold" },
+    ];
+
+    const parts = [];
+    let lastIndex = 0;
+
+    patterns.forEach(({ regex, type }) => {
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        // Push text before the matched pattern
+        if (match.index > lastIndex) {
+          parts.push({
+            type: "text",
+            content: text.slice(lastIndex, match.index),
+          });
+        }
+
+        // Push the matched part based on its type
+        parts.push({ type, content: match[1] });
+
+        lastIndex = regex.lastIndex;
+      }
+    });
+
+    // Push any remaining text after the last match
+    if (lastIndex < text.length) {
+      parts.push({ type: "text", content: text.slice(lastIndex) });
+    }
+
+    return parts;
+  };
+
   return (
     <Form layout="vertical">
-      <Input
+      <TextArea
         className="mt-2"
-        style={{
-          width: "100%",
-          backgroundColor: "#ffffff",
-          borderRadius: "8px",
-          border: "1px solid #d1d5db",
-          boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
-          padding: "8px 12px",
-        }}
         value={questionText}
         onChange={(e) => setQuestionText(e.target.value)}
         placeholder="Enter your question"
+        rows={4}
       />
-
-      {/* Select box for choosing the question type */}
 
       <Select
         placeholder="Select Question Type"
         className="w-full min-h-[40px] rounded-[8px] mt-2 mb-3"
-        style={{
-          boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
-        }}
         value={questionType}
         onChange={(value) => setQuestionType(value)}
       >
-        {/* Placeholder option */}
         <Option value="" disabled>
-          <p className="text-neutral-400 opacity-70">Select Question Type</p>
+          Select Question Type
         </Option>
-
         {questionTypes.map((type, index) => (
           <Option key={index} value={type}>
             {type}
@@ -152,18 +163,36 @@ const AddQuestion = ({ questions, setQuestions }) => {
         ))}
       </Select>
 
-      {/* Conditionally display "Add options" if renderOptionsInput() returns something */}
-      {renderOptionsInput() && (
-        <h1 className="text-[#000000] text-[14px] mt-1">Add options</h1>
-      )}
-
-      {/* Render dynamic inputs based on selected question type */}
+      {renderOptionsInput() && <h1 className="mt-1">Add options</h1>}
       {renderOptionsInput()}
-
-      {/* Render correct answer input if the question type requires it */}
       {renderCorrectAnswerInput()}
 
-      {/* Button to add the question */}
+      <div className="mt-4">
+        {splitText(questionText).map((part, index) => {
+          if (part.type === "code") {
+            return (
+              <pre
+                key={index}
+                className="p-2 mb-2 border overflow-scroll border-gray-300 rounded bg-gray-100"
+              >
+                <code className="text-sm">{part.content}</code>
+              </pre>
+            );
+          } else {
+            // return (
+            //   <textarea
+            //     draggable={false}
+            //     key={index}
+            //     className="text-[15px] w-full h-auto text-black"
+            //   >
+            //     {part.content.trimStart()}
+            //   </textarea>
+            // );
+            return null;
+          }
+        })}
+      </div>
+
       <div className="w-full flex justify-end">
         <Button
           onClick={handleAddQuestion}
@@ -174,15 +203,7 @@ const AddQuestion = ({ questions, setQuestions }) => {
             background: "#083344",
           }}
         >
-          <p
-            className="poppins text-[15px] px-1.5 normal-case text-white"
-            style={{
-              textDecorationThickness: "1.5px",
-              textUnderlineOffset: "2px",
-            }}
-          >
-            Add Question
-          </p>
+          <p className="text-white text-[15px] px-1.5">Add Question</p>
         </Button>
       </div>
     </Form>

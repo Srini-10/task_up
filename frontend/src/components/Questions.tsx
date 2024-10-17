@@ -7,6 +7,8 @@ import Checkbox, { CheckboxProps } from "@mui/material/Checkbox";
 import Confetti from "react-confetti";
 import useWindowSize from "react-use/lib/useWindowSize";
 import { Spinner } from "@nextui-org/react";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { nightOwl } from "react-syntax-highlighter/dist/esm/styles/prism";
 import {
   Radio,
   RadioGroup,
@@ -288,45 +290,6 @@ const QuestionComponent: React.FC = () => {
     }
   }, [testStatus, endTime]);
 
-  // Tab visibility change listener
-  const handleVisibilityChange = useCallback(() => {
-    if (document.visibilityState === "hidden") {
-      setTabSwitchCount((prevCount) => {
-        const newCount = prevCount + 1;
-
-        // Save the updated count in localStorage
-        // sessionStorage.setItem("tabSwitchCount", newCount);
-
-        if (newCount > 3) {
-          showToast(
-            "You have switched tabs too many times. Your test will be submitted automatically."
-          );
-          setMalpractice(true);
-        } else {
-          showToast(
-            `Switched tab ${newCount} time. You can switch ${
-              3 - newCount
-            } more time.`
-          );
-        }
-        return newCount;
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isAuthenticated && !isTestSubmitted) {
-      document.addEventListener("visibilitychange", handleVisibilityChange);
-
-      return () => {
-        document.removeEventListener(
-          "visibilitychange",
-          handleVisibilityChange
-        );
-      };
-    }
-  }, [isAuthenticated, handleVisibilityChange, isTestSubmitted]);
-
   const handleSubmit = useCallback(
     async (
       event: React.FormEvent<HTMLFormElement> | null = null,
@@ -410,6 +373,7 @@ const QuestionComponent: React.FC = () => {
 
         console.log("Response from server:", answers);
 
+        sessionStorage.removeItem("tabSwitchCount");
         // Store submission status in localStorage
         localStorage.setItem("isTestSubmitted", "true");
         localStorage.setItem("isSubmissionSuccessful", "true");
@@ -434,6 +398,46 @@ const QuestionComponent: React.FC = () => {
       setIsSubmissionSuccessful,
     ]
   );
+
+  // Tab visibility change listener
+  const handleVisibilityChange = useCallback(() => {
+    if (document.visibilityState === "hidden") {
+      setTabSwitchCount((prevCount) => {
+        const newCount = prevCount + 1;
+
+        // Save the updated count in sessionStorage as a string
+        sessionStorage.setItem("tabSwitchCount", newCount.toString());
+
+        if (newCount > 3) {
+          showToast(
+            "You have switched tabs too many times. Your test will be submitted automatically."
+          );
+          setMalpractice(true);
+          handleSubmit(); // This is the dependency that should be added
+        } else {
+          showToast(
+            `Switched tab ${newCount} time. You can switch ${
+              3 - newCount
+            } more time.`
+          );
+        }
+        return newCount;
+      });
+    }
+  }, [handleSubmit]);
+
+  useEffect(() => {
+    if (isAuthenticated && !isTestSubmitted) {
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+
+      return () => {
+        document.removeEventListener(
+          "visibilitychange",
+          handleVisibilityChange
+        );
+      };
+    }
+  }, [isAuthenticated, handleVisibilityChange, isTestSubmitted]);
 
   useEffect(() => {
     const fetchTestData = async () => {
@@ -946,6 +950,41 @@ const QuestionComponent: React.FC = () => {
     }
   });
 
+  const splitText = (text) => {
+    const patterns = [
+      { regex: /`\*{([^%]+)}\*`/g, type: "code" },
+      { regex: /\*\*([^*]+)\*\*/g, type: "bold" },
+    ];
+
+    const parts = [];
+    let lastIndex = 0;
+
+    patterns.forEach(({ regex, type }) => {
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        // Push text before the matched pattern
+        if (match.index > lastIndex) {
+          parts.push({
+            type: "text",
+            content: text.slice(lastIndex, match.index),
+          });
+        }
+
+        // Push the matched part based on its type (e.g., bold)
+        parts.push({ type, content: match[1] });
+
+        lastIndex = regex.lastIndex;
+      }
+    });
+
+    // Push any remaining text after the last match
+    if (lastIndex < text.length) {
+      parts.push({ type: "text", content: text.slice(lastIndex) });
+    }
+
+    return parts;
+  };
+
   const BpRadioIcon = styled("span")(({ theme }) => ({
     borderRadius: "50%",
     width: 18,
@@ -960,18 +999,18 @@ const QuestionComponent: React.FC = () => {
     },
     "input:hover ~ &": {
       backgroundColor: "#e2e8f0",
-      ...theme.applyStyles("dark", {
+      ...theme.applyStyles("nightOwl", {
         backgroundColor: "#083344",
       }),
     },
     "input:disabled ~ &": {
       boxShadow: "none",
       background: "rgba(206,217,224,.5)",
-      ...theme.applyStyles("dark", {
+      ...theme.applyStyles("nightOwl", {
         background: "#083344",
       }),
     },
-    ...theme.applyStyles("dark", {
+    ...theme.applyStyles("nightOwl", {
       boxShadow: "0 0 0 1px rgb(16 22 26 / 40%)",
       backgroundColor: "#083344",
       backgroundImage:
@@ -1009,18 +1048,18 @@ const QuestionComponent: React.FC = () => {
     },
     "input:hover ~ &": {
       backgroundColor: "#e2e8f0",
-      ...theme.applyStyles("dark", {
+      ...theme.applyStyles("nightOwl", {
         backgroundColor: "#083344",
       }),
     },
     "input:disabled ~ &": {
       boxShadow: "none",
       background: "#e2e8f0",
-      ...theme.applyStyles("dark", {
+      ...theme.applyStyles("nightOwl", {
         background: "#083344",
       }),
     },
-    ...theme.applyStyles("dark", {
+    ...theme.applyStyles("nightOwl", {
       boxShadow: "0 0 0 1px rgb(16 22 26 / 40%)",
       backgroundColor: "#083344",
       backgroundImage:
@@ -1430,10 +1469,75 @@ const QuestionComponent: React.FC = () => {
                           >
                             {questions.map((question, index) =>
                               selectedIndexes.includes(index) ? (
-                                <div className="h-[46vh]" key={question._id}>
-                                  <h1 className="text-[22px] font-bold normal-case">
-                                    {question.questionText}
-                                  </h1>
+                                <div
+                                  className="h-[46vh] overflow-y-scroll"
+                                  key={question._id}
+                                >
+                                  <div className="mt-4">
+                                    {splitText(question.questionText).map(
+                                      (part, index) => {
+                                        // Handle code part rendering
+                                        if (part.type === "code") {
+                                          return (
+                                            <pre
+                                              key={index}
+                                              className="mb-2 h-full rounded-lg bg-[#011827] overflow-scroll"
+                                            >
+                                              <SyntaxHighlighter
+                                                language="javascript"
+                                                style={nightOwl}
+                                              >
+                                                {part.content}
+                                              </SyntaxHighlighter>
+                                            </pre>
+                                          );
+                                        }
+
+                                        // Handle bold part rendering (split by lines)
+                                        if (part.type === "bold") {
+                                          return part.content
+                                            .split("\n")
+                                            .map((line, lineIdx) => (
+                                              <p
+                                                key={lineIdx}
+                                                className="font-bold text-black leading-6"
+                                              >
+                                                {part.content.trim()}
+                                              </p>
+                                            ));
+                                        }
+
+                                        // For regular text part
+                                        return part.content
+                                          .split("\n")
+                                          .map((line, lineIdx) => {
+                                            // Check if the line starts with a bullet point (•) or ends with a period
+                                            if (line.trim().startsWith("•")) {
+                                              return (
+                                                <p
+                                                  key={lineIdx}
+                                                  className="text-[14px] poppins0 text-black leading-6"
+                                                >
+                                                  <span className="list-disc pl-6">
+                                                    {line.trim()}
+                                                  </span>
+                                                </p>
+                                              );
+                                            }
+
+                                            // For normal lines (just regular text)
+                                            return (
+                                              <p
+                                                key={lineIdx}
+                                                className="text-[14px] poppins0 text-black leading-6"
+                                              >
+                                                {line.trim()}
+                                              </p>
+                                            );
+                                          });
+                                      }
+                                    )}
+                                  </div>
 
                                   <div className="h-[1px] mt-2 w-full opacity-20 bg-cyan-800 rounded-lg"></div>
 
