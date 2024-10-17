@@ -7,60 +7,127 @@ import QuestionComponent from "./components/Questions.tsx";
 
 function App() {
   const [isWideScreen, setIsWideScreen] = useState<boolean>(true);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [username, setUsername] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
 
-  // Check if the current path matches "/tests/:testId"
+  // Fixed username and password for authentication
+  const fixedUsername = "Fools";
+  const fixedPassword = "Password@123";
+
   const isTestPage = useMatch("/tests/:testId");
 
-  // Check window width and update state accordingly
+  useEffect(() => {
+    const authData = localStorage.getItem("auth");
+    if (authData) {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth;
       const screenWidth = window.screen.width;
-
-      // Check if the window width is greater than 90% of the screen width
       setIsWideScreen(width > screenWidth * 0.95);
     };
 
-    // Add resize event listener
     window.addEventListener("resize", handleResize);
-
-    // Initial check on mount
     handleResize();
-
-    // Clean up the event listener on component unmount
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  return (
-    <>
-      {isWideScreen ? (
-        <>
-          {isTestPage ? (
-            <Routes>
-              <Route path="/tests/:testId" element={<QuestionComponent />} />
-            </Routes>
-          ) : (
-            <div className="w-full h-screen overflow-y-scroll flex flex-col justify-between">
-              <Navbar />
-              <div className="w-full h-[calc(100vh-45px)] flex justify-between">
-                <div className="w-[350px] h-full overflow-y-scroll bg-[#05202b]">
-                  <Sidebar />
+  const handleLogin = () => {
+    if (username === fixedUsername && password === fixedPassword) {
+      localStorage.setItem("auth", JSON.stringify({ username, password }));
+      setIsAuthenticated(true);
+    } else {
+      alert("Invalid credentials");
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("auth");
+    setIsAuthenticated(false);
+    setUsername("");
+    setPassword("");
+  };
+
+  if (isTestPage || isAuthenticated) {
+    return (
+      <>
+        {isWideScreen ? (
+          <>
+            {isTestPage ? (
+              <Routes>
+                <Route path="/tests/:testId" element={<QuestionComponent />} />
+              </Routes>
+            ) : (
+              <div className="w-full h-screen overflow-y-scroll flex flex-col justify-between">
+                <Navbar />
+                <div className="w-full h-[calc(100vh-45px)] flex justify-between">
+                  <div className="w-[350px] h-full overflow-y-scroll bg-[#05202b]">
+                    <Sidebar />
+                  </div>
+                  <div className="w-full h-full">
+                    <AppRouter />
+                  </div>
                 </div>
-                <div className="w-full h-full">
-                  <AppRouter />
-                </div>
+                <button
+                  onClick={handleLogout}
+                  className="absolute right-0 top-0 py-2 px-4 h-[45px] text-[14px] font-medium bg-[#083344] text-white"
+                >
+                  Logout
+                </button>
               </div>
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="text-center p-5">
-          <p className="text-xl text-gray-600">
-            Please view this on a larger screen to see the content.
-          </p>
+            )}
+          </>
+        ) : (
+          <div className="text-center p-5">
+            <p className="text-xl text-gray-600">
+              Please view this on a larger screen to see the content.
+            </p>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  return (
+    <div className="flex justify-center items-center min-h-screen bg-gray-100">
+      <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-md">
+        <h1 className="text-3xl poppins2 font-semibold text-center text-gray-800">
+          Admin Login
+        </h1>
+        <div className="space-y-4">
+          <div>
+            <input
+              type="text"
+              placeholder="Enter your username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full text-[16px] px-4 py-2 mt-2 text-gray-800 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <input
+              type="text"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full text-[16px] px-4 py-2 mb-2 text-gray-800 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none"
+            />
+          </div>
+
+          <button
+            onClick={handleLogin}
+            className="w-full px-4 py-2 mt-4 font-medium text-white bg-cyan-900 rounded-lg hover:bg-cyan-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            Login
+          </button>
         </div>
-      )}
-    </>
+      </div>
+    </div>
   );
 }
 
