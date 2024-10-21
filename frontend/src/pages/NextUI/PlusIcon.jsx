@@ -1,4 +1,4 @@
-export const PlusIcon = ({ size = 24, width, height, ...props }) => (
+export const PlusIcon = ({ size = 24, width = 24, height = 24, ...props }) => (
   <svg
     aria-hidden="true"
     fill="none"

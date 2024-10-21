@@ -31,8 +31,18 @@ app.use(express.json());
 
 app.use("/uploads", express.static("uploads"));
 
+// mongoose
+//   .connect(process.env.MONGODB_URI, {
+//     useNewUrlParser: true,
+//     useUnifiedTopology: true,
+//   })
+//   .then(() => console.log("Connected to MongoDB"))
+//   .catch((err) => console.error("MongoDB connection error:", err));
+
+const mongoURI = "mongodb://localhost:27017/sassDB";
+
 mongoose
-  .connect(process.env.MONGODB_URI, {
+  .connect(mongoURI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
@@ -52,16 +62,6 @@ const storage = multer.diskStorage({
   },
 });
 
-// const mongoURI = "mongodb://localhost:27017/sassDB";
-
-// mongoose
-//   .connect(mongoURI, {
-//     useNewUrlParser: true,
-//     useUnifiedTopology: true,
-//   })
-//   .then(() => console.log("Connected to MongoDB"))
-//   .catch((err) => console.error("MongoDB connection error:", err));
-
 const upload = multer({ storage: storage });
 
 const QuestionSchema = new mongoose.Schema({
@@ -69,6 +69,8 @@ const QuestionSchema = new mongoose.Schema({
   inputType: { type: String, required: true },
   options: { type: [String], default: [] },
   correctAnswers: { type: [Number], required: true },
+  required: { type: Boolean, default: false },
+  sector: { type: String, required: false },
 });
 
 // Define the schema for tests
@@ -287,6 +289,8 @@ app.post("/api/tests", async (req, res) => {
       inputType: q.inputType,
       options: q.options,
       correctAnswers: q.correctAnswers || [],
+      required: q.required || false,
+      sector: q.sector,
     }));
 
     // Create a new test instance
@@ -347,6 +351,8 @@ app.get("/api/tests", async (req, res) => {
         inputType: q.inputType,
         options: q.options,
         correctAnswers: q.correctAnswers || [],
+        required: q.required,
+        sector: q.sector,
       })),
       candidates: test.candidates,
       malpractice: test.malpractice,
@@ -524,16 +530,51 @@ app.put("/api/tests/:testId/questions/:questionId", async (req, res) => {
 app.delete("/api/questions/:questionId", async (req, res) => {
   const { questionId } = req.params;
 
+  console.log(`Attempting to delete question with ID: ${questionId}`);
+
+  // Check if the questionId is a valid ObjectId
+  if (!mongoose.Types.ObjectId.isValid(questionId)) {
+    console.log(`Invalid question ID: ${questionId}`);
+    return res.status(400).json({ message: "Invalid question ID format" });
+  }
+
   try {
+    // Find the Test document that contains the question
     const test = await Test.findOne({ "questions._id": questionId });
+
     if (!test) {
+      console.log(
+        `Test document containing question ID ${questionId} not found.`
+      );
+      return res.status(404).json({ message: "Test document not found" });
+    }
+
+    // Log the found Test document to debug
+    console.log(`Found Test document with ID: ${test._id}`);
+    console.log(`Questions in Test document:`, test.questions);
+
+    // Check if the question is present in the array
+    const questionToDelete = test.questions.find(
+      (question) => question._id.toString() === questionId
+    );
+    if (!questionToDelete) {
+      console.log(
+        `Question with ID ${questionId} not found in the Test document.`
+      );
       return res.status(404).json({ message: "Question not found" });
     }
 
-    // Remove the question from the questions array
-    test.questions.id(questionId).remove();
-    await test.save(); // Save the updated test
+    // Log the question to be deleted
+    console.log(`Deleting question:`, questionToDelete);
 
+    // Remove the question from the test's questions array
+    test.questions = test.questions.filter(
+      (question) => question._id.toString() !== questionId
+    );
+
+    // Save the updated Test document
+    await test.save();
+    console.log(`Question with ID ${questionId} deleted successfully.`);
     res.status(200).json({ message: "Question deleted successfully" });
   } catch (error) {
     console.error("Error deleting question:", error);
@@ -850,7 +891,9 @@ app.put("/api/tests/:testId", async (req, res) => {
         questionText: q.questionText,
         inputType: q.inputType,
         options: q.options,
-        correctAnswers: q.correctAnswers || [], // Ensure this is valid
+        correctAnswers: q.correctAnswers || [],
+        required: q.required,
+        sector: q.sector,
       };
     });
 

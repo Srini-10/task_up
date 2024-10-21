@@ -12,13 +12,15 @@ import axios from "axios";
 import { useParams } from "react-router-dom";
 import SearchIcon from "../assets/Search_Icon.svg";
 import DefaultProfile from "../assets/User_Profile.svg";
-import Trash from "../assets/trash_outline.svg";
-import View from "../assets/view_outline.svg";
-import Edit from "../assets/create_outline.svg";
+import EditIcon from "../assets/EditIcon.tsx";
+import TrashIcon from "../assets/TrashIcon.tsx";
+import EyeIcon from "../assets/EyeIcon.tsx";
 import { showToast } from "../toastUtil.js";
-import { Form, Input, Modal, Select, Popconfirm, Spin } from "antd";
+import { Form, Input, Modal, Select, Popconfirm, Spin, Switch } from "antd";
+import AddedQuestions from "./AddedQuestions.tsx";
 
 const { Option } = Select;
+const { TextArea } = Input;
 
 type Candidate = {
   profilePicture?: any;
@@ -34,6 +36,8 @@ type Question = {
   inputType: string;
   options: string[];
   correctAnswers: any[];
+  required: boolean;
+  sector: string;
 };
 
 // type EditingQuestion = {
@@ -45,6 +49,7 @@ type Question = {
 
 const EditTest = () => {
   const { testId } = useParams();
+  const [sectorOptions, setSectorOptions] = useState([]);
   const [viewQuestionIndex, setViewQuestionIndex] = useState(null);
   const [testName, setTestName] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -65,6 +70,7 @@ const EditTest = () => {
   const [selectAll, setSelectAll] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isButtonDisabled, setIsButtonDisabled] = useState(true);
   console.log(showDetails);
 
   const [questionTypes] = useState([
@@ -73,6 +79,16 @@ const EditTest = () => {
     "Radio",
     "Text Input",
   ]);
+
+  const [isRequired, setIsRequired] = useState(
+    editingQuestion?.required || false
+  );
+
+  useEffect(() => {
+    if (editingQuestion) {
+      setIsRequired(editingQuestion.required); // Initialize isRequired when editingQuestion changes
+    }
+  }, [editingQuestion]);
 
   useEffect(() => {
     if (questions.length > 0) {
@@ -101,11 +117,11 @@ const EditTest = () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        "https://taskup-backend.vercel.app/api/testCandidates"
+        "http://localhost:20000/api/testCandidates"
       );
       setCandidates(response.data);
       console.log(response.data);
-      localStorage.setItem("candidates", JSON.stringify(response.data));
+      // localStorage.setItem("candidates", JSON.stringify(response.data));
     } catch (error) {
       console.error("Error fetching candidates:", error);
     } finally {
@@ -114,16 +130,16 @@ const EditTest = () => {
   };
 
   useEffect(() => {
-    const storedCandidates = JSON.parse(localStorage.getItem("candidates")!);
+    // const storedCandidates = JSON.parse(localStorage.getItem("candidates")!);
     const storedSelectedCandidates = JSON.parse(
       localStorage.getItem("selectedCandidates")!
     );
 
-    if (storedCandidates && storedCandidates.length > 0) {
-      setCandidates(storedCandidates);
-    } else {
-      fetchCandidates();
-    }
+    // if (storedCandidates && storedCandidates.length > 0) {
+    //   setCandidates(storedCandidates);
+    // } else {
+    fetchCandidates();
+    // }
 
     if (storedSelectedCandidates) {
       setSelectedCandidates(storedSelectedCandidates);
@@ -140,12 +156,34 @@ const EditTest = () => {
     sessionStorage.setItem("password", password);
   }, [password]);
 
+  useEffect(() => {
+    // Fetch available sector options when the component loads
+    const fetchSectorOptions = async () => {
+      try {
+        const response = await axios.get("/api/tests");
+        setSectorOptions(response.data);
+      } catch (error) {
+        console.error("Error fetching sector options:", error);
+      }
+    };
+
+    fetchSectorOptions();
+  }, []);
+
+  const handleSectorChange = (newSector) => {
+    // Update the state to reflect the new sector value
+    setEditingQuestion((prev) => ({
+      ...prev,
+      sector: newSector,
+    }));
+  };
+
   // Fetch test details when component mounts
   useEffect(() => {
     const fetchTestDetails = async () => {
       try {
         const response = await axios.get(
-          `https://taskup-backend.vercel.app/api/tests/${testId}`
+          `http://localhost:20000/api/tests/${testId}`
         );
         const test = response.data;
 
@@ -187,6 +225,9 @@ const EditTest = () => {
         setCandidates(
           savedCandidates.length > 0 ? savedCandidates : test.candidates || []
         );
+
+        // Enable the button after fetching test details
+        setIsButtonDisabled(false);
       } catch (error) {
         console.error("Error fetching test details:", error);
         showToast("An error occurred while fetching test details.");
@@ -195,11 +236,6 @@ const EditTest = () => {
 
     fetchTestDetails();
   }, [testId]);
-
-  const handleViewQuestion = (index) => {
-    setViewQuestionIndex(index);
-    setIsViewModalOpen(true);
-  };
 
   const handleCloseViewModal = () => {
     setIsViewModalOpen(false);
@@ -222,54 +258,77 @@ const EditTest = () => {
   }, [candidates]);
 
   const handleEditTest = async () => {
-    const selectedCandidateData = candidates
-      .filter((candidate: Candidate) =>
-        selectedCandidates.includes(candidate._id)
-      )
-      .map((candidate: Candidate) => ({
-        registerNumber: candidate.registerNumber,
-        dob: candidate.dob,
-        phone: candidate.phone,
-        email: candidate.email,
-      }));
+    if (isButtonDisabled) {
+      alert("Please wait, questions are still being fetched.");
+    } else {
+      const selectedCandidateData = candidates
+        .filter((candidate: Candidate) =>
+          selectedCandidates.includes(candidate._id)
+        )
+        .map((candidate: Candidate) => ({
+          registerNumber: candidate.registerNumber,
+          dob: candidate.dob,
+          phone: candidate.phone,
+          email: candidate.email,
+        }));
 
-    // Convert startDate and endDate to UTC before sending to backend
-    const utcStartDate = new Date(startDate).toISOString();
-    const utcEndDate = new Date(endDate).toISOString();
+      // Convert startDate and endDate to UTC before sending to backend
+      const utcStartDate = new Date(startDate).toISOString();
+      const utcEndDate = new Date(endDate).toISOString();
 
-    const updatedTestData = {
-      testName,
-      startDate: utcStartDate,
-      endDate: utcEndDate,
-      authOption,
-      password: authOption === "custom" ? password : "",
-      questions: questions.map((q: Question, index) => ({
-        questionText: q.questionText,
-        inputType: q.inputType,
-        options: q.options,
-        correctAnswers: q.correctAnswers.length > 0 ? q.correctAnswers : null,
-      })),
-      candidates: selectedCandidateData,
-      malpractice: false,
-    };
+      const updatedTestData = {
+        testName,
+        startDate: utcStartDate,
+        endDate: utcEndDate,
+        authOption,
+        password: authOption === "custom" ? password : "",
+        questions: questions.map((q: Question, index) => ({
+          questionText: q.questionText,
+          inputType: q.inputType,
+          options: q.options,
+          correctAnswers: q.correctAnswers.length > 0 ? q.correctAnswers : null,
+          required: q.required || false,
+          sector: q.sector,
+        })),
+        candidates: selectedCandidateData,
+        malpractice: false,
+      };
 
-    try {
-      await axios.put(
-        `https://taskup-backend.vercel.app/api/tests/${testId}`,
-        updatedTestData
-      );
-      showToast("Test updated successfully!");
-      sessionStorage.removeItem(`test-questions-${testId}`);
-      sessionStorage.removeItem("candidates");
-      setShowDetails(false);
-    } catch (error) {
-      console.error("Error updating test:", error);
-      showToast(
-        "An error occurred while updating the test: " +
-          error.response?.data?.message || error.message
-      );
+      try {
+        await axios.put(
+          `http://localhost:20000/api/tests/${testId}`,
+          updatedTestData
+        );
+        showToast("Test updated successfully!");
+        sessionStorage.removeItem(`test-questions-${testId}`);
+        sessionStorage.removeItem("candidates");
+        setShowDetails(false);
+      } catch (error) {
+        console.error("Error updating test:", error);
+        showToast(
+          "An error occurred while updating the test: " +
+            error.response?.data?.message || error.message
+        );
+      }
     }
   };
+
+  useEffect(() => {
+    // Disable page refresh (beforeunload event)
+    const handleBeforeUnload = (e) => {
+      const message = "Are you sure you want to leave?";
+      e.returnValue = message; // Standard for most browsers
+      return message; // Some older browsers
+    };
+
+    // Add event listeners
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    // Cleanup event listeners on component unmount
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, []);
 
   const resetForm = () => {
     setTestName("");
@@ -281,6 +340,7 @@ const EditTest = () => {
     setCandidates([]);
     setSelectedCandidates([]);
     setShowDetails(false);
+    sessionStorage.removeItem(`test-questions-${testId}`);
     localStorage.removeItem("candidates");
     localStorage.removeItem("questions");
     localStorage.removeItem("selectedCandidates");
@@ -296,37 +356,111 @@ const EditTest = () => {
     setEndDate(localDate);
   };
 
-  const handleEditQuestion = (index) => {
-    setEditQuestionIndex(index);
-    const questionToEdit = questions[index];
-    //@ts-ignore
-    setEditingQuestion({ ...questionToEdit, index });
+  const handleViewQuestion = (sector, index) => {
+    const question = groupedQuestions[sector][index]; // Get the question by sector and index
+    setViewQuestionIndex(question.originalIndex); // Use the original index for identifying
+    setIsViewModalOpen(true);
+  };
+
+  // Handle Editing a question
+  const handleEditQuestion = (sector, index) => {
+    console.log(groupedQuestions, questions);
+
+    const question = groupedQuestions[sector][index]; // Get the question by sector and index
+    const originalQuestion = questions[question.originalIndex]; // Get the original question from the main list using the originalIndex
+
+    // Set the question to be edited with all its properties and include originalIndex
+    setEditingQuestion({
+      ...originalQuestion,
+      originalIndex: question.originalIndex,
+      sector: sector, // Ensure sector is properly set
+    });
+
     setIsEditModalOpen(true);
   };
 
   // Handle Saving the Edited Question
   const handleSaveEditedQuestion = () => {
-    const updatedQuestions = [...questions];
-    //@ts-ignore
-    updatedQuestions[editingQuestion.index] = { ...editingQuestion };
+    const updatedQuestions = [...questions]; // Create a copy of the questions array
+
+    // Create the updated question object, preserving the sector and required status
+    const updatedQuestion = {
+      ...editingQuestion,
+      required: isRequired,
+      sector: editingQuestion.sector, // Make sure sector is updated properly
+    };
+
+    // Update the original question in the list
+    updatedQuestions[editingQuestion.originalIndex] = updatedQuestion;
+
+    // Update the state
     setQuestions(updatedQuestions);
     setEditingQuestion(null);
     setIsEditModalOpen(false);
   };
 
-  const handleDeleteQuestion = (index) => {
-    if (index >= 0 && index < questions.length) {
-      const updatedQuestions = [...questions];
-      updatedQuestions.splice(index, 1);
-      setQuestions(updatedQuestions);
-      console.log(`Question at index ${index} deleted.`);
-    } else {
-      console.error("Invalid index for deletion.");
+  const groupedQuestions = questions.reduce((groups, question, idx) => {
+    const { sector } = question; // Assuming each question has a 'sector' property
+    if (!groups[sector]) {
+      groups[sector] = [];
+    }
+    groups[sector].push({ ...question, originalIndex: idx }); // Store original index in question object
+    return groups;
+  }, {});
+
+  // const handleDeleteQuestion = (index) => {
+  //   const updatedQuestions = [...questions];
+  //   updatedQuestions.splice(index, 1);
+  //   setQuestions(updatedQuestions);
+  //   console.log(`Question at index ${index} deleted.`);
+  // };
+
+  const handleDeleteQuestion = async (index) => {
+    const questionId = questions[index]._id; // Ensure the _id is correct
+    console.log(`Attempting to delete question with ID: ${questionId}`);
+
+    try {
+      // Send the delete request to the backend
+      const response = await axios.delete(
+        `http://localhost:20000/api/questions/${questionId}`
+      );
+
+      if (response.status === 200) {
+        console.log(`Question with ID ${questionId} deleted from DB.`);
+
+        // Update the UI after deletion
+        const newQuestions = [...questions];
+        newQuestions.splice(index, 1);
+        setQuestions(newQuestions);
+
+        // Remove from sessionStorage
+        sessionStorage.removeItem(`test-questions-${testId}`);
+      }
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        // Question not found in DB, remove only from sessionStorage
+        console.warn(
+          `Question with ID ${questionId} not found in DB. Deleting from sessionStorage.`
+        );
+
+        // Update the UI
+        const newQuestions = [...questions];
+        newQuestions.splice(index, 1);
+        setQuestions(newQuestions);
+
+        // Remove from sessionStorage
+        sessionStorage.removeItem(`test-questions-${testId}`);
+      } else {
+        // Handle other errors
+        console.error("Error deleting question from DB:", error);
+      }
     }
   };
 
-  const handleConfirmDelete = (index) => {
-    handleDeleteQuestion(index);
+  const handleConfirmDelete = (sector, index) => {
+    const question = groupedQuestions[sector][index];
+    console.log("Original question ID:", question._id); // Add logging to confirm the correct questionId
+    handleDeleteQuestion(question.originalIndex); // Make sure originalIndex is correct
   };
 
   // Load selected candidates from sessionStorage when the component mounts (optional)
@@ -445,272 +579,29 @@ const EditTest = () => {
   return (
     <>
       <div className="w-full py-6 px-7 flex justify-between items-start gap-5">
-        <div className="w-full min-h-full max-h-[calc(100vh-90px)] rounded-lg flex flex-col">
-          <h1 className="poppins2 text-[23px] mb-1 text-[#083344]">
-            Added Questions
-          </h1>
-          <div className="w-full h-full bg-slate-100 rounded-lg mt-3 p-4 pt-2 overflow-y-scroll">
-            {isLoading ? (
-              <div className="z-50 w-full h-full flex mt-2 justify-center items-center">
-                <Spin size="large" className="custom-spin" />
-              </div>
-            ) : (
-              questions.map((question, index) => (
-                <div
-                  key={index}
-                  className="flex justify-between items-start px-1 border-b-[1.5px] pb-3 border-cyan-900"
-                >
-                  <h1 className="mt-4 poppins text-[14px] overflow-hidden text-[#000000]">
-                    {index + 1}.{question.questionText}
-                  </h1>
-
-                  <div className="gap-0.5 flex">
-                    <IconButton
-                      edge="end"
-                      aria-label="view"
-                      onClick={() => handleViewQuestion(index)}
-                      className="w-[33px] h-[33px]"
-                    >
-                      <img src={View} alt="" />
-                    </IconButton>
-                    <IconButton
-                      edge="end"
-                      aria-label="edit"
-                      onClick={() => handleEditQuestion(index)}
-                      className="w-[33px] h-[33px]"
-                    >
-                      <img src={Edit} alt="" />
-                    </IconButton>
-                    <Popconfirm
-                      title="Are you sure to delete this question?"
-                      onConfirm={() => handleConfirmDelete(index)}
-                      okText="Yes"
-                      cancelText="No"
-                    >
-                      <IconButton
-                        edge="end"
-                        aria-label="delete"
-                        className="w-[33px] h-[33px]"
-                      >
-                        <img src={Trash} alt="" />
-                      </IconButton>
-                    </Popconfirm>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* View Question Modal */}
-          <Modal open={isViewModalOpen} closable={false} footer={null}>
-            <div>
-              <div className="w-full flex justify-end">
-                <button
-                  className="underline text-[15px]"
-                  onClick={handleCloseViewModal}
-                >
-                  Close
-                </button>
-              </div>
-              {viewQuestionIndex !== null && (
-                <div className="mt-3">
-                  {/* Question Title */}
-                  <h1 className="poppins text-[16px] text-[#083344]">
-                    {viewQuestionIndex + 1}.
-                    {questions[viewQuestionIndex].questionText}
-                  </h1>
-
-                  {/* Question Type */}
-                  <h1 className="mt-3 font-semibold">Question Type:</h1>
-                  <p className="mt-1 w-full bg-[#dbe2e5] rounded-lg px-5 py-2 gap-0.5 justify-start flex flex-col">
-                    {questions[viewQuestionIndex].inputType}
-                  </p>
-
-                  {/* Display Options and Correct Answers only when the question type is not 'Text Input' */}
-                  {questions[viewQuestionIndex].inputType !== "Text Input" ? (
-                    <>
-                      {/* Options */}
-                      <h1 className="mt-3 font-semibold">Options:</h1>
-                      <ul className="mt-1 w-full bg-[#dbe2e5] rounded-lg px-5 py-2 gap-0.5 justify-start flex flex-col">
-                        {questions[viewQuestionIndex].options.map(
-                          (option, index) => (
-                            <li
-                              className="list-disc text-[#083344]"
-                              key={index}
-                            >
-                              {option}
-                            </li>
-                          )
-                        )}
-                      </ul>
-
-                      {/* Correct Answer */}
-                      <h1 className="flex gap-2 mt-2 font-semibold justify-start">
-                        Correct Answer:
-                      </h1>
-                      <p className="mt-1 w-full bg-[#dbe2e5] text-[#083344] rounded-lg px-5 py-2 gap-0.5 justify-start flex flex-col">
-                        {questions[viewQuestionIndex].correctAnswers.length >
-                        0 ? (
-                          questions[viewQuestionIndex].correctAnswers.map(
-                            (i) => (
-                              <li className="list-disc" key={i}>
-                                {questions[viewQuestionIndex].options[i]}
-                              </li>
-                            )
-                          )
-                        ) : (
-                          <span>N/A</span>
-                        )}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="mt-3 text-gray-600">
-                      No options available for Text Input questions.
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          </Modal>
-
-          {editingQuestion && (
-            <Modal
-              visible={isEditModalOpen}
-              closable={false}
-              onOk={handleSaveEditedQuestion}
-              footer={null}
-            >
-              {editingQuestion && editQuestionIndex !== null && (
-                <div className="mt-1">
-                  <h1 className="poppins2 text-[20px] text-[#083344]">
-                    Question no.{editQuestionIndex + 1}
-                  </h1>
-                  <Input
-                    placeholder="Question Text"
-                    value={editingQuestion.questionText}
-                    onChange={(e) => handleQuestionTextChange(e.target.value)}
-                    style={{
-                      width: "100%",
-                      backgroundColor: "#ffffff",
-                      borderRadius: "8px",
-                      border: "1px solid #d1d5db",
-                      boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
-                    }}
-                    className="h-[40px] mt-2"
-                  />
-                  <Select
-                    value={editingQuestion.inputType}
-                    onChange={handleInputTypeChange}
-                    style={{
-                      width: "100%",
-                      backgroundColor: "#ffffff",
-                      borderRadius: "8px",
-                      border: "0px solid #d1d5db",
-                      boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
-                    }}
-                    className="h-[40px] mt-2"
-                  >
-                    {questionTypes.map((type) => (
-                      <Option key={type} value={type}>
-                        {type}
-                      </Option>
-                    ))}
-                  </Select>
-
-                  {editingQuestion.inputType !== "Text Input" ? (
-                    <div className="mt-4">
-                      <h1 className="text-[16px] poppins text-[#083344]">
-                        Options:
-                      </h1>
-                      {editingQuestion.options.map((option, index) => (
-                        <Input
-                          key={index}
-                          placeholder={`Option ${index + 1}`}
-                          style={{
-                            width: "100%",
-                            backgroundColor: "#ffffff",
-                            borderRadius: "8px",
-                            border: "1px solid #d1d5db",
-                            boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
-                          }}
-                          className="h-[40px] my-1"
-                          value={option}
-                          onChange={(e) =>
-                            handleOptionChange(index, e.target.value)
-                          }
-                        />
-                      ))}
-
-                      {editingQuestion.inputType === "Multiple Choice" ? (
-                        <Form.Item>
-                          <h1 className="text-[16px] mt-4 poppins text-[#083344]">
-                            Correct Answer:
-                          </h1>
-                          <Select
-                            mode="multiple"
-                            style={{
-                              width: "100%",
-                              backgroundColor: "#ffffff",
-                              borderRadius: "8px",
-                              border: "0px solid #d1d5db",
-                              boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
-                            }}
-                            className="h-[40px] mt-1"
-                            value={editingQuestion.correctAnswers}
-                            onChange={(selectedIndices) =>
-                              handleCorrectAnswerSelect(selectedIndices)
-                            }
-                          >
-                            {editingQuestion.options.map((option, index) => (
-                              <Option key={index} value={index}>
-                                {`${option}` || `Option ${index + 1}`}
-                              </Option>
-                            ))}
-                          </Select>
-                        </Form.Item>
-                      ) : (
-                        <Form.Item>
-                          <Select
-                            value={editingQuestion.correctAnswers[0]}
-                            onChange={(selectedIndex) =>
-                              handleCorrectAnswerSelect([selectedIndex])
-                            }
-                          >
-                            {editingQuestion.options.map((option, index) => (
-                              <Option key={index} value={index}>
-                                {`Option ${index + 1}: ${option}`}
-                              </Option>
-                            ))}
-                          </Select>
-                        </Form.Item>
-                      )}
-                    </div>
-                  ) : (
-                    // Display message when the question type is 'Text Input'
-                    <p className="mt-3 text-gray-600">
-                      No options needed for Text Input questions.
-                    </p>
-                  )}
-
-                  <div className="w-full flex justify-end gap-3">
-                    <button
-                      className="px-4 py-2 rounded-lg text-white font-semibold bg-[#8298a2]"
-                      onClick={() => setIsEditModalOpen(false)}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      className="px-4 py-2 rounded-lg text-white font-semibold bg-[#083344]"
-                      onClick={handleSaveEditedQuestion}
-                    >
-                      Save Question
-                    </button>
-                  </div>
-                </div>
-              )}
-            </Modal>
-          )}
-        </div>
+        <AddedQuestions
+          questions={questions}
+          handleViewQuestion={handleViewQuestion}
+          handleEditQuestion={handleEditQuestion}
+          handleConfirmDelete={handleConfirmDelete}
+          isViewModalOpen={isViewModalOpen}
+          handleCloseViewModal={handleCloseViewModal}
+          viewQuestionIndex={viewQuestionIndex}
+          isEditModalOpen={isEditModalOpen}
+          editingQuestion={editingQuestion}
+          editQuestionIndex={editQuestionIndex}
+          handleSaveEditedQuestion={handleSaveEditedQuestion}
+          isRequired={isRequired}
+          setIsRequired={setIsRequired}
+          sectorOptions={sectorOptions}
+          handleSectorChange={handleSectorChange}
+          handleQuestionTextChange={handleQuestionTextChange}
+          handleInputTypeChange={handleInputTypeChange}
+          questionTypes={questionTypes}
+          handleOptionChange={handleOptionChange}
+          handleCorrectAnswerSelect={handleCorrectAnswerSelect}
+          setIsEditModalOpen={setIsEditModalOpen}
+        />
         <div className="min-w-[450px] bg-[#a5c4ca] rounded-lg p-4">
           <h1 className="poppins2 text-[25px] text-[#083344]">Edit Test</h1>
           <Input

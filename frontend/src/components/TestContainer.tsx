@@ -27,7 +27,7 @@ const TestContainer: React.FC = () => {
     const fetchTests = async () => {
       try {
         const response = await axios.get(
-          "https://taskup-backend.vercel.app/api/tests/recent"
+          "http://localhost:20000/api/tests/recent"
         );
         setTests(response.data);
         setLoading(false);
@@ -46,7 +46,7 @@ const TestContainer: React.FC = () => {
     setLoadingAnimation(true);
     try {
       const response = await axios.delete(
-        `https://taskup-backend.vercel.app/api/tests/${testId}`
+        `http://localhost:20000/api/tests/${testId}`
       );
       showToast(response.data.message);
       // After deletion, fetch the updated list of tests
@@ -104,7 +104,7 @@ const TestContainer: React.FC = () => {
         <div className="z-50 w-full h-full flex justify-center items-center">
           <Spin size="large" className="custom-spin" />
         </div>
-      ) : (
+      ) : tests.length > 0 ? ( // Display the tests only when there are tests
         <>
           <h1 className="text-[20px] font-semibold">Recently Added Tests</h1>
           {tests.map((test, index) => (
@@ -184,6 +184,8 @@ const TestContainer: React.FC = () => {
             </div>
           ))}
         </>
+      ) : (
+        <p className="font-medium">No tests found.</p>
       )}
     </div>
   );

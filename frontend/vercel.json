@@ -12,7 +12,7 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "https://taskup-backend.vercel.app/api/$1"
+      "dest": "http://localhost:20000/api/$1"
     },
     {
       "handle": "filesystem"
@@ -23,6 +23,6 @@
     }
   ],
   "env": {
-    "REACT_APP_API_URL": "https://taskup-backend.vercel.app"
+    "REACT_APP_API_URL": "http://localhost:20000"
   }
 }

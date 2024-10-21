@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   Table,
   TableHeader,
@@ -13,10 +13,12 @@ import {
   DropdownMenu,
   DropdownItem,
   Pagination,
+  Checkbox,
 } from "@nextui-org/react";
 import { Modal } from "antd";
-import { PlusIcon } from "./NextUI/PlusIcon";
+import { PlusIcon } from "./NextUI/PlusIcon.jsx";
 import { VerticalDotsIcon } from "./NextUI/VerticalDotsIcon";
+import { SearchIcon } from "./NextUI/SearchIcon.jsx";
 
 type Candidate = {
   _id: string;
@@ -27,11 +29,33 @@ type Candidate = {
   profilePicture: string;
 };
 
+const reorderColumns = (columns, fromIndex, toIndex) => {
+  const reordered = [...columns];
+  const [movedColumn] = reordered.splice(fromIndex, 1);
+  reordered.splice(toIndex, 0, movedColumn);
+  return reordered;
+};
+
 export default function CreateCandidates() {
+  const [selectedItems, setSelectedItems] = useState([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [filterValue, setFilterValue] = useState("");
-  const [page, setPage] = useState(1);
-  const [rowsPerPage] = useState(10);
+  // Retrieve stored values or default to 1 for page and 5 for rows per page
+  const storedPage = localStorage.getItem("page");
+  const storedRowsPerPage = localStorage.getItem("rowsPerPage");
+
+  const [columns, setColumns] = useState([
+    { id: "email", label: "Email" },
+    { id: "registerNumber", label: "Register Number" },
+    { id: "dob", label: "Date of Birth" },
+    { id: "phone", label: "Phone" },
+  ]);
+
+  const [page, setPage] = useState<number>(storedPage ? Number(storedPage) : 1);
+  const [rowsPerPage, setRowsPerPage] = useState<number>(
+    storedRowsPerPage ? Number(storedRowsPerPage) : 5
+  );
+  const [selectedRows, setSelectedRows] = useState([]);
   const [isAddVisible, setAddVisible] = useState(false);
   const [isEditVisible, setEditVisible] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate>({
@@ -55,6 +79,8 @@ export default function CreateCandidates() {
     null
   );
 
+  console.log(selectedItems);
+
   const confirmDelete = (candidateId: string) => {
     Modal.confirm({
       title: "Confirm Deletion",
@@ -63,22 +89,31 @@ export default function CreateCandidates() {
     });
   };
 
+  const confirmDeleteSelected = (candidateId: string) => {
+    Modal.confirm({
+      title: "Confirm Deletion",
+      content: "Are you sure you want to delete this candidate?",
+      onOk: () => handleDeleteSelected(candidateId),
+    });
+  };
+
   // Fetch data from the API
   useEffect(() => {
     const fetchCandidates = async () => {
       try {
         const response = await fetch(
-          "https://taskup-backend.vercel.app/api/testCandidates"
+          "http://localhost:20000/api/testCandidates"
         );
         const data = await response.json();
         setCandidates(data);
+        setSelectedItems(data);
 
         // Create an array to hold the updated candidates with actual image URLs
         const updatedCandidates = data.map((candidate: Candidate) => {
           // Check if the candidate has a profile picture
           if (candidate.profilePicture) {
             // Construct the image URL assuming the backend serves images from /uploads folder
-            const profilePictureURL = `https://taskup-backend.vercel.app/uploads/${candidate.profilePicture}`;
+            const profilePictureURL = `http://localhost:20000/uploads/${candidate.profilePicture}`;
             console.log(
               `Candidate ${candidate.registerNumber} Profile Picture:`,
               profilePictureURL
@@ -116,7 +151,7 @@ export default function CreateCandidates() {
       formData.append("profilePicture", file);
 
       const response = await fetch(
-        "https://taskup-backend.vercel.app/uploadProfilePicture",
+        "http://localhost:20000/uploadProfilePicture",
         {
           method: "POST",
           body: formData,
@@ -135,6 +170,21 @@ export default function CreateCandidates() {
     }
   };
 
+  const refreshCandidates = async () => {
+    const response = await fetch("http://localhost:20000/api/testCandidates");
+    const data = await response.json();
+    setCandidates(data);
+  };
+
+  // Check if any field is filled
+  const isFormValid = Object.values(newCandidate).some(
+    (field) => field.trim() !== ""
+  );
+
+  const isEditFormValid = Object.values(selectedCandidate).some(
+    (field) => field.trim() !== ""
+  );
+
   const handleSave = async () => {
     try {
       let profilePictureURL = newCandidate.profilePicture;
@@ -149,7 +199,7 @@ export default function CreateCandidates() {
       };
 
       const response = await fetch(
-        "https://taskup-backend.vercel.app/api/testCandidates",
+        "http://localhost:20000/api/testCandidates",
         {
           method: "POST",
           headers: {
@@ -158,9 +208,27 @@ export default function CreateCandidates() {
           body: JSON.stringify(candidateToSave),
         }
       );
+
       if (response.ok) {
         const addedCandidate = await response.json();
-        setCandidates([...candidates, addedCandidate]);
+
+        // Make sure the new candidate has a profile picture URL if applicable
+        if (addedCandidate.profilePicture) {
+          addedCandidate.profilePicture = `http://localhost:20000/uploads/${addedCandidate.profilePicture}`;
+        }
+
+        // Update state by adding the new candidate to the list without requiring a page refresh
+        setCandidates((prevCandidates) => [...prevCandidates, addedCandidate]);
+        await refreshCandidates();
+        // Clear the form fields after saving
+        setNewCandidate({
+          _id: "",
+          registerNumber: "",
+          dob: "",
+          email: "",
+          phone: "",
+          profilePicture: "",
+        });
       } else {
         console.error("Error adding new candidate:", response.statusText);
       }
@@ -169,14 +237,13 @@ export default function CreateCandidates() {
     }
 
     setAddVisible(false);
-    setEditVisible(false);
     setProfilePictureFile(null);
   };
 
   const handleDelete = async (candidateId: string) => {
     try {
       const response = await fetch(
-        `https://taskup-backend.vercel.app/api/testCandidates/${candidateId}`,
+        `http://localhost:20000/api/testCandidates/${candidateId}`,
         {
           method: "DELETE",
         }
@@ -212,7 +279,7 @@ export default function CreateCandidates() {
       }
 
       const response = await fetch(
-        `https://taskup-backend.vercel.app/api/testCandidates/${selectedCandidate._id}`,
+        `http://localhost:20000/api/testCandidates/${selectedCandidate._id}`,
         {
           method: "PUT",
           body: formData,
@@ -255,10 +322,14 @@ export default function CreateCandidates() {
   const filteredItems = React.useMemo(() => {
     let filteredCandidates = [...candidates];
     if (filterValue) {
-      filteredCandidates = filteredCandidates.filter((candidate) =>
-        candidate.registerNumber
-          .toLowerCase()
-          .includes(filterValue.toLowerCase())
+      filteredCandidates = filteredCandidates.filter(
+        (candidate) =>
+          candidate.registerNumber
+            .toLowerCase()
+            .includes(filterValue.toLowerCase()) ||
+          candidate.dob.toLowerCase().includes(filterValue.toLowerCase()) ||
+          candidate.email.toLowerCase().includes(filterValue.toLowerCase()) ||
+          candidate.phone.toLowerCase().includes(filterValue.toLowerCase())
       );
     }
     return filteredCandidates;
@@ -270,12 +341,102 @@ export default function CreateCandidates() {
     return filteredItems.slice(start, end);
   }, [page, filteredItems, rowsPerPage]);
 
-  const pages = Math.ceil(candidates.length / rowsPerPage);
+  // Infinite pagination: No maximum page, just render more items as necessary
+  const totalItems = filteredItems.length;
+  // Dynamically calculating the number of pages
+  const pages = Math.ceil(totalItems / rowsPerPage) || 1;
 
   const openEditModal = (candidate: Candidate) => {
     setSelectedCandidate(candidate);
     setEditVisible(true);
   };
+
+  // Save to localStorage whenever page or rowsPerPage changes
+  useEffect(() => {
+    localStorage.setItem("page", String(page));
+    localStorage.setItem("rowsPerPage", String(rowsPerPage));
+  }, [page, rowsPerPage]);
+
+  const onRowsPerPageChange = React.useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      setRowsPerPage(Number(e.target.value));
+      setPage(1);
+    },
+    []
+  );
+
+  // Function to handle individual row selection
+  const handleSelectRow = (registerNumber) => {
+    if (selectedRows.includes(registerNumber)) {
+      // Deselect if already selected
+      setSelectedRows(selectedRows.filter((row) => row !== registerNumber));
+    } else {
+      // Add the row to the selected ones
+      setSelectedRows([...selectedRows, registerNumber]);
+    }
+  };
+
+  const handleReorder = (fromIndex, toIndex) => {
+    const updatedColumns = reorderColumns(columns, fromIndex, toIndex);
+    setColumns(updatedColumns);
+  };
+
+  // Function to handle "Select All" checkbox in the header
+  const handleSelectAll = () => {
+    if (areAllRowsSelected) {
+      // If all rows are selected, clear selection
+      setSelectedRows([]);
+    } else {
+      // Select all rows on the current page
+      const allRegisterNumbers = items.map((item) => item.registerNumber);
+      setSelectedRows(allRegisterNumbers);
+    }
+  };
+
+  // Function to handle "Delete Selected" candidates
+  const handleDeleteSelected = async () => {
+    // Loop over selected rows and delete each candidate from the server
+    for (const registerNumber of selectedRows) {
+      try {
+        // Find the candidate to delete
+        const candidateToDelete = candidates.find(
+          (candidate) => candidate.registerNumber === registerNumber
+        );
+
+        if (candidateToDelete) {
+          const response = await fetch(
+            `http://localhost:20000/api/testCandidates/${candidateToDelete._id}`,
+            {
+              method: "DELETE",
+            }
+          );
+
+          if (response.ok) {
+            console.log(
+              `Candidate with Register Number ${registerNumber} deleted successfully`
+            );
+          } else {
+            const errorData = await response.text();
+            console.error("Error deleting candidate:", errorData);
+          }
+        }
+      } catch (error) {
+        console.error("Error deleting candidate:", error);
+      }
+    }
+
+    // Filter out the deleted rows from the `candidates` state
+    const remainingCandidates = candidates.filter(
+      (candidate) => !selectedRows.includes(candidate.registerNumber)
+    );
+    setCandidates(remainingCandidates); // Update the candidates state
+    setSelectedRows([]); // Clear selected rows after deletion
+  };
+
+  // Check if all rows are selected
+  const areAllRowsSelected = useMemo(() => {
+    return items.length > 0 && selectedRows.length === items.length;
+  }, [selectedRows, items]);
 
   const renderCell = (candidate: Candidate, columnKey: React.Key) => {
     switch (columnKey) {
@@ -315,64 +476,158 @@ export default function CreateCandidates() {
 
   return (
     <div className="overflow-y-scroll h-full">
-      <div className="flex flex-col gap-4 p-5">
+      <div className="flex justify-between gap-4 pt-5 px-5">
         <Input
           isClearable
-          placeholder="Search by register number..."
+          placeholder="Search candidate..."
           value={filterValue}
+          startContent={<SearchIcon className="text-default-300" />}
+          variant="bordered"
+          classNames={{
+            base: "w-full sm:max-w-[44%]",
+            inputWrapper: "border-1",
+          }}
           onClear={() => setFilterValue("")}
           onValueChange={setFilterValue}
+          className="w-[60%]"
         />
-        <Button
-          className="bg-foreground text-background"
-          endContent={<PlusIcon width={undefined} height={undefined} />}
-          size="sm"
-          onClick={() => setAddVisible(true)}
-        >
-          Add New
-        </Button>
+        {/* Button to reorder columns */}
+        <div className="flex mb-4">
+          {columns.length > 1 && (
+            <Button
+              onClick={() => handleReorder(0, 4)}
+              size="sm"
+              className="mr-2 h-9 bg-neutral-300"
+            >
+              Reorder Columns
+            </Button>
+          )}
+          <Button
+            className="bg-foreground w-32 h-10 text-background"
+            endContent={<PlusIcon width={undefined} height={undefined} />}
+            size="sm"
+            onClick={() => setAddVisible(true)}
+          >
+            Add New
+          </Button>
+        </div>
       </div>
 
-      <Table aria-label="Candidates Table">
+      <div className="flex justify-between items-center h-[50px] mt-3 px-5">
+        {selectedRows.length > 0 ? (
+          <Button
+            className="bg-foreground px-6 text-background"
+            disabled={selectedRows.length === 0}
+            onClick={confirmDeleteSelected}
+          >
+            Delete Selected Rows
+          </Button>
+        ) : (
+          <>
+            <div className="w-[300px]">
+              <span className="text-default-400 text-small">
+                Total {filteredItems.length} Candidates
+              </span>
+            </div>
+          </>
+        )}
+        <div className="flex w-full justify-end items-center">
+          <label className="flex items-center text-default-400 text-small">
+            Rows per page:
+            <select
+              className="bg-transparent cursor-pointer outline-none text-default-400 text-small"
+              onChange={onRowsPerPageChange}
+              value={rowsPerPage}
+            >
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="10000000000000000000000000000">All</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <Table aria-label="Candidates Table" className="p-5">
         <TableHeader>
+          <TableColumn>
+            <Checkbox
+              color="default"
+              isSelected={areAllRowsSelected}
+              onChange={handleSelectAll}
+              aria-label="Select all rows"
+            />
+          </TableColumn>
           <TableColumn>S.No</TableColumn>
-          {/* <TableColumn>Profile</TableColumn> */}
-          <TableColumn>Register Number</TableColumn>
-          <TableColumn>Date of Birth</TableColumn>
-          <TableColumn>Email</TableColumn>
-          <TableColumn>Phone</TableColumn>
+
+          {/* Dynamically rendering columns based on state */}
+          {columns.map((col) => (
+            <TableColumn key={col.id}>{col.label}</TableColumn>
+          ))}
           <TableColumn>Actions</TableColumn>
         </TableHeader>
+
         <TableBody>
           {items.map((candidate, index) => (
-            <TableRow key={candidate.registerNumber}>
-              <TableCell>{index + 1}</TableCell>
-              {/* <TableCell>
-                <img
-                  src={candidate.profilePicture}
-                  alt={"Profile"}
-                  width={100}
-                  height={100}
+            <TableRow
+              key={candidate.registerNumber}
+              className="hover:bg-neutral-100 transition-colors duration-100"
+            >
+              <TableCell>
+                <Checkbox
+                  color="default"
+                  isSelected={selectedRows.includes(candidate.registerNumber)}
+                  onChange={() => handleSelectRow(candidate.registerNumber)}
                 />
-              </TableCell> */}
-              <TableCell>{candidate.registerNumber}</TableCell>
-              <TableCell>{candidate.dob}</TableCell>
-              <TableCell>{candidate.email}</TableCell>
-              <TableCell>{candidate.phone}</TableCell>
+              </TableCell>
+              <TableCell>{index + 1}</TableCell>
+
+              {/* Dynamically render columns based on order */}
+              {columns.map((col) => (
+                <TableCell key={col.id}>{candidate[col.id]}</TableCell>
+              ))}
+
               <TableCell>{renderCell(candidate, "actions")}</TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
 
-      <div className="absolute z-50 right-10 bottom-5 py-3 px-3 bg-black shadow-md rounded-2xl flex justify-between items-center">
-        <Pagination page={page} total={pages} onChange={setPage} />
-      </div>
-
+      {/* Pagination */}
+      {pages > 1 && (
+        <div className="z-50 px-5 w-[calc(100vw-280px)] absolute right-0 bottom-5 flex justify-between items-center">
+          <span className="text-small text-default-400">
+            {selectedRows.length === items.length
+              ? "All items selected"
+              : `${selectedRows.length} of ${items.length} selected`}
+          </span>
+          <Pagination
+            page={page}
+            total={pages}
+            onChange={(newPage) => setPage(newPage)}
+            isCompact
+            size="md"
+            showControls={true}
+          />
+        </div>
+      )}
       {/* Add New Candidate Modal */}
       <Modal open={isAddVisible} closable={false} footer={null}>
-        <div className="flex flex-col justify-between gap-2">
+        <div className="flex flex-col justify-between gap-3">
+          <h1 className="poppins2 text-[25px]">Create Candidate</h1>
+
           <Input
+            className="h-12"
+            label="Email"
+            value={newCandidate.email}
+            onChange={(e) =>
+              setNewCandidate({ ...newCandidate, email: e.target.value })
+            }
+          />
+          <Input
+            className="h-12"
             label="Register Number"
             value={newCandidate.registerNumber}
             onChange={(e) =>
@@ -383,6 +638,7 @@ export default function CreateCandidates() {
             }
           />
           <Input
+            className="h-12"
             label="Date of Birth"
             value={newCandidate.dob}
             onChange={(e) =>
@@ -390,41 +646,42 @@ export default function CreateCandidates() {
             }
           />
           <Input
-            label="Email"
-            value={newCandidate.email}
-            onChange={(e) =>
-              setNewCandidate({ ...newCandidate, email: e.target.value })
-            }
-          />
-          <Input
+            className="h-12"
             label="Phone"
             value={newCandidate.phone}
             onChange={(e) =>
               setNewCandidate({ ...newCandidate, phone: e.target.value })
             }
           />
-          {/* <Input
-            className="mt-3"
-            label="Profile Picture"
-            type="file"
-            onChange={(e) =>
-              setProfilePictureFile(e.target.files ? e.target.files[0] : null)
-            }
-          /> */}
         </div>
 
-        <div className="flex justify-end mt-5 gap-3">
+        <div className="flex justify-end mt-6 gap-3">
           <Button onClick={() => setAddVisible(false)}>Close</Button>
-          <Button color="primary" onClick={handleSave}>
+          <Button
+            color="primary"
+            onClick={handleSave}
+            disabled={!isFormValid} // Disable if form is not filled
+          >
             Save
           </Button>
         </div>
       </Modal>
-
       {/* Edit Candidate Modal */}
-      <Modal open={isEditVisible} onClose={() => setEditVisible(false)}>
+      <Modal open={isEditVisible} closable={false} footer={null}>
         {selectedCandidate && (
-          <>
+          <div className="flex flex-col justify-between gap-3">
+            <h1 className="poppins2 text-[25px]">Edit Candidate</h1>
+
+            <Input
+              label="Email"
+              value={selectedCandidate.email}
+              onChange={(e) =>
+                setSelectedCandidate({
+                  ...selectedCandidate,
+                  email: e.target.value,
+                })
+              }
+            />
             <Input
               label="Register Number"
               value={selectedCandidate.registerNumber}
@@ -446,16 +703,6 @@ export default function CreateCandidates() {
               }
             />
             <Input
-              label="Email"
-              value={selectedCandidate.email}
-              onChange={(e) =>
-                setSelectedCandidate({
-                  ...selectedCandidate,
-                  email: e.target.value,
-                })
-              }
-            />
-            <Input
               label="Phone"
               value={selectedCandidate.phone}
               onChange={(e) =>
@@ -465,16 +712,25 @@ export default function CreateCandidates() {
                 })
               }
             />
-            <Input
+            {/* <Input
               label="Profile Picture"
               type="file"
               onChange={(e) =>
                 setProfilePictureFile(e.target.files ? e.target.files[0] : null)
               }
-            />
+            /> */}
 
-            <Button onClick={handleEditSave}>Save</Button>
-          </>
+            <div className="flex justify-end mt-6 gap-3">
+              <Button onClick={() => setEditVisible(false)}>Close</Button>
+              <Button
+                color="primary"
+                onClick={handleEditSave}
+                disabled={!isEditFormValid}
+              >
+                Save
+              </Button>
+            </div>
+          </div>
         )}
       </Modal>
     </div>

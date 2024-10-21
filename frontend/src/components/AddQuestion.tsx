@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import { Input, Form, Select } from "antd";
-import { Button } from "@mui/material";
+import React, { useState, useEffect } from "react";
+import { Input, Form, Select, Switch, Modal, Button } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -10,8 +10,26 @@ const AddQuestion = ({ questions, setQuestions }) => {
   const [questionType, setQuestionType] = useState("");
   const [options, setOptions] = useState(["", "", "", ""]);
   const [correctAnswers, setCorrectAnswers] = useState<string[]>([]);
+  const [isRequired, setIsRequired] = useState(false);
+  const [sector, setSector] = useState("");
+  const [sectors, setSectors] = useState<string[]>([]);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [newSector, setNewSector] = useState("");
 
   const questionTypes = ["Multiple Choice", "Select", "Radio", "Text Input"];
+
+  // Load sectors from localStorage on component mount
+  useEffect(() => {
+    const storedSectors = JSON.parse(localStorage.getItem("sectors") || "[]");
+    setSectors(storedSectors);
+  }, []);
+
+  // Update localStorage whenever sectors change
+  useEffect(() => {
+    if (sectors.length > 0) {
+      localStorage.setItem("sectors", JSON.stringify(sectors));
+    }
+  }, [sectors]);
 
   const handleAddQuestion = () => {
     const newQuestion = {
@@ -24,6 +42,8 @@ const AddQuestion = ({ questions, setQuestions }) => {
           : correctAnswers.length > 0
           ? [correctAnswers[0]]
           : [],
+      required: isRequired,
+      sector,
     };
 
     setQuestions([...questions, newQuestion]);
@@ -31,6 +51,8 @@ const AddQuestion = ({ questions, setQuestions }) => {
     setQuestionType("");
     setOptions(["", "", "", ""]);
     setCorrectAnswers([]);
+    setIsRequired(false);
+    setSector("");
   };
 
   const handleOptionChange = (index, value) => {
@@ -101,40 +123,25 @@ const AddQuestion = ({ questions, setQuestions }) => {
     return null;
   };
 
-  // Updated splitText function to handle new patterns (`**`, `$$`, `%%`)
-  const splitText = (text) => {
-    const patterns = [
-      { regex: /`\*{([^%]+)}\*`/g, type: "code" },
-      { regex: /\*\*([^%]+)\*\*/g, type: "bold" },
-    ];
+  // Function to show the modal for adding a sector
+  const showModal = () => {
+    setIsModalVisible(true);
+  };
 
-    const parts = [];
-    let lastIndex = 0;
-
-    patterns.forEach(({ regex, type }) => {
-      let match;
-      while ((match = regex.exec(text)) !== null) {
-        // Push text before the matched pattern
-        if (match.index > lastIndex) {
-          parts.push({
-            type: "text",
-            content: text.slice(lastIndex, match.index),
-          });
-        }
-
-        // Push the matched part based on its type
-        parts.push({ type, content: match[1] });
-
-        lastIndex = regex.lastIndex;
-      }
-    });
-
-    // Push any remaining text after the last match
-    if (lastIndex < text.length) {
-      parts.push({ type: "text", content: text.slice(lastIndex) });
+  // Function to handle adding a new sector
+  const handleAddSector = () => {
+    if (newSector && !sectors.includes(newSector)) {
+      const updatedSectors = [...sectors, newSector];
+      setSectors(updatedSectors);
+      setNewSector("");
+      setIsModalVisible(false);
     }
+  };
 
-    return parts;
+  // Function to close the modal
+  const handleCancel = () => {
+    setNewSector("");
+    setIsModalVisible(false);
   };
 
   return (
@@ -146,6 +153,46 @@ const AddQuestion = ({ questions, setQuestions }) => {
         placeholder="Enter your question"
         rows={4}
       />
+
+      <Select
+        placeholder="Select Sector"
+        className="w-full min-h-[40px] rounded-[8px] mt-2 mb-3"
+        value={sector}
+        onChange={setSector}
+      >
+        <Option value="" disabled>
+          Select Sector
+        </Option>
+        {sectors.map((sector, index) => (
+          <Option key={index} value={sector}>
+            {sector}
+          </Option>
+        ))}
+      </Select>
+
+      <Button
+        onClick={showModal}
+        icon={<PlusOutlined />}
+        type="dashed"
+        style={{ marginBottom: "10px" }}
+      >
+        Add New Sector
+      </Button>
+
+      <Modal
+        title="Add New Sector"
+        visible={isModalVisible}
+        onOk={handleAddSector}
+        onCancel={handleCancel}
+        okText="Add Sector"
+        cancelText="Cancel"
+      >
+        <Input
+          placeholder="Enter new sector name"
+          value={newSector}
+          onChange={(e) => setNewSector(e.target.value)}
+        />
+      </Modal>
 
       <Select
         placeholder="Select Question Type"
@@ -167,31 +214,18 @@ const AddQuestion = ({ questions, setQuestions }) => {
       {renderOptionsInput()}
       {renderCorrectAnswerInput()}
 
-      <div className="mt-4">
-        {splitText(questionText).map((part, index) => {
-          if (part.type === "code") {
-            return (
-              <pre
-                key={index}
-                className="p-2 mb-2 border overflow-scroll border-gray-300 rounded bg-gray-100"
-              >
-                <code className="text-sm">{part.content}</code>
-              </pre>
-            );
-          } else {
-            // return (
-            //   <textarea
-            //     draggable={false}
-            //     key={index}
-            //     className="text-[15px] w-full h-auto text-black"
-            //   >
-            //     {part.content.trimStart()}
-            //   </textarea>
-            // );
-            return null;
-          }
-        })}
-      </div>
+      <Form.Item label="Is this question required?">
+        <Switch
+          checked={isRequired}
+          onChange={(checked) => setIsRequired(checked)}
+          checkedChildren=""
+          unCheckedChildren=""
+          style={{
+            backgroundColor: isRequired ? "#083344" : "#b2d5dc",
+            borderColor: isRequired ? "#083344" : "#b2d5dc",
+          }}
+        />
+      </Form.Item>
 
       <div className="w-full flex justify-end">
         <Button

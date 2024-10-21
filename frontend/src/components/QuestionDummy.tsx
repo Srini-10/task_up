@@ -33,6 +33,8 @@ import { Input, Switch } from "antd";
 import Wave from "react-wavify";
 // import DraggableCalculator from "./Calculator/DraggableCalculator.tsx";
 import Calculator from "./Calculator/Calculator.tsx";
+import SectorComponent from "./SectorComponent.tsx";
+import QuestionsBySector from "./QuestionsBySector.tsx";
 
 // type SelectedAnswers = {
 //   [key: string]: number[] | number;
@@ -43,29 +45,19 @@ interface Question {
   options: string[];
   correctAnswers: number[];
   required: boolean;
-  sector: string;
   inputType: "Text Input" | "Select" | "Radio" | "Multiple Choice";
 }
 
 const QuestionComponent: React.FC = () => {
   const [fullScreenMode, setFullScreenMode] = useState<boolean>(true);
   const [isSubmitDisabled, setIsSubmitDisabled] = useState(true);
-  const [sectors, setSectors] = useState([0]);
-  const [sectorCounts, setSectorCounts] = useState({});
-  const [activeSector, setActiveSector] = useState(
-    sectors.length > 0 ? sectors[0] : null
-  );
-
-  useEffect(() => {
-    // If sectors change, update the active sector to the first one
-    if (sectors.length > 0) {
-      setActiveSector(sectors[0]);
-    }
-  }, [sectors]);
-
   const formRef = useRef(null);
   const { width, height } = useWindowSize();
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [sectors, setSectors] = useState([]);
+  const [activeSector, setActiveSector] = useState(null);
+  const [selectedQuestion, setSelectedQuestion] = useState(null);
+  const [filteredQuestions, setFilteredQuestions] = useState([]);
   const [isSubmissionSuccessful, setIsSubmissionSuccessful] = useState(false);
   const [isAutoSubmitted, setIsAutoSubmitted] = useState<boolean>(false);
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([0]);
@@ -97,7 +89,7 @@ const QuestionComponent: React.FC = () => {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [score, setScore] = useState<number | null>(null);
   const { testId } = useParams<{ testId: string }>();
-  const [leftWidth, setLeftWidth] = useState(70);
+  const [leftWidth, setLeftWidth] = useState(64);
   const isResizing = useRef(false);
   const navigate = useNavigate();
   const requestRef = useRef<number | null>(null);
@@ -327,10 +319,10 @@ const QuestionComponent: React.FC = () => {
 
   useEffect(() => {
     // Check if the test has ended and auto submit if it hasn't already been submitted
-    if (testStatus === "ended" && !isAutoSubmitted) {
+    if (testStatus === "ended" && !isAutoSubmitted && !isTestSubmitted) {
       handleMalpracticeSubmit();
     }
-  }, [testStatus, isAutoSubmitted]);
+  }, [testStatus, isAutoSubmitted, isTestSubmitted]);
 
   const handleMalpracticeSubmit = useCallback(
     async (
@@ -567,9 +559,9 @@ const QuestionComponent: React.FC = () => {
         const newCount = prevCount + 1;
 
         // Save the updated count in sessionStorage as a string
-        localStorage.setItem("tabSwitchCount", newCount.toString());
+        // localStorage.setItem("tabSwitchCount", newCount.toString());
 
-        if (newCount > 3) {
+        if (newCount > 300) {
           showToast(
             "You have switched tabs too many times. Your test will be submitted automatically."
           );
@@ -645,26 +637,6 @@ const QuestionComponent: React.FC = () => {
       );
       setQuestions(response.data);
 
-      const fetchedQuestions = response.data;
-
-      // Sort the questions by sector and order (assuming "order" is a field in the question)
-      const sortedQuestions = fetchedQuestions.sort((a, b) => {
-        if (a.sector === b.sector) {
-          return a.order - b.order; // Sort by order within the same sector
-        }
-        return a.sector.localeCompare(b.sector); // Sort by sector
-      });
-
-      setQuestions(sortedQuestions);
-
-      // Group questions by sector and calculate the count for each sector
-      const sectorCounts = fetchedQuestions.reduce((acc, question) => {
-        acc[question.sector] = (acc[question.sector] || 0) + 1;
-        return acc;
-      }, {});
-
-      setSectorCounts(sectorCounts); // Store the sector counts in state
-
       // Extract unique sectors from the fetched questions
       const uniqueSectors = [
         ...new Set(response.data.map((question) => question.sector)),
@@ -678,6 +650,21 @@ const QuestionComponent: React.FC = () => {
       setLoading(false);
     }
   }, [testId]);
+
+  const handleSectorClick = (sector) => {
+    setActiveSector(sector);
+
+    // Filter questions that belong to the selected sector
+    const sectorQuestions = questions.filter(
+      (question) => question.sector === sector
+    );
+    setFilteredQuestions(sectorQuestions);
+
+    // Display the first question of the selected sector
+    if (sectorQuestions.length > 0) {
+      setSelectedQuestion(sectorQuestions[0]);
+    }
+  };
 
   // Check if user is already authenticated and load submission status from sessionStorage
   useEffect(() => {
@@ -879,37 +866,27 @@ const QuestionComponent: React.FC = () => {
 
   const handleInputChange = (
     questionId: string,
-    answer: number | string | (number | string)[] | null // Allow null for clearing the answer
+    answer: number | string | number[]
   ) => {
     console.log("Updating questionId:", questionId, "with answer:", answer);
 
-    // Handle both single values and arrays (for multiple answers like checkboxes)
-    let formattedAnswer = Array.isArray(answer)
-      ? answer.filter(
-          (item) => item !== null && item !== undefined && item !== ""
-        ) // Filter out null/undefined/empty string values
-      : answer !== null && answer !== ""
-      ? [answer]
-      : []; // Treat empty or null as no answer
-
-    // If the formattedAnswer array is empty or null, treat it as no answer (null)
-    if (formattedAnswer.length === 0 || answer === null || answer === "") {
-      formattedAnswer = null;
-    }
+    // Ensure answer is an array, even for single answers
+    const formattedAnswer = Array.isArray(answer) ? answer : [answer];
 
     // Update selectedAnswers for the specific questionId
-    setSelectedAnswers((prevAnswers) => ({
-      ...prevAnswers,
-      [questionId]: formattedAnswer, // Store null if answer is removed, otherwise the formatted answer
-    }));
-
-    console.log("Updated selectedAnswers:", formattedAnswer);
+    setSelectedAnswers((prevAnswers) => {
+      const updatedAnswers = {
+        ...prevAnswers,
+        [questionId]: formattedAnswer, // Store the answer in array format
+      };
+      console.log("Updated selectedAnswers:", updatedAnswers);
+      return updatedAnswers;
+    });
   };
 
   // For Single Answer Inputs like Radio and Select
   const handleSingleAnswerChange = (questionId: string, answer: any) => {
-    // Directly set single answer (can be null if deselected)
-    handleInputChange(questionId, answer === null ? null : [answer]);
+    handleInputChange(questionId, [answer]); // Wrap the single answer in an array
   };
 
   // For Multiple Choice Inputs like Checkboxes
@@ -919,14 +896,10 @@ const QuestionComponent: React.FC = () => {
     isChecked: boolean
   ) => {
     const currentAnswers = selectedAnswers[questionId] || []; // Get current answers or an empty array
-
-    // Add or remove the index based on whether it is checked
     const newAnswers = isChecked
       ? [...currentAnswers, index] // Add index if checked
       : currentAnswers.filter((ans: number) => ans !== index); // Remove if unchecked
-
-    // If no answers remain after removal, set the answer to null
-    handleInputChange(questionId, newAnswers.length === 0 ? null : newAnswers);
+    handleInputChange(questionId, newAnswers); // Update answers in array format
   };
 
   useEffect(() => {
@@ -1001,24 +974,6 @@ const QuestionComponent: React.FC = () => {
       sessionStorage.setItem("selectedQuestionIndex", newIndex.toString());
     }
   }, [selectedIndexes, questions.length]);
-
-  // Handle navigation to the previous question
-  // const handlePrevious = useCallback(() => {
-  //   if (selectedIndexes[0] > 0) {
-  //     const newIndex = selectedIndexes[0] - 1;
-  //     setSelectedIndexes([selectedIndexes[0] - 1]);
-  //     sessionStorage.setItem("selectedQuestionIndex", newIndex.toString());
-  //   }
-  // }, [selectedIndexes]);
-
-  // // Handle navigation to the next question
-  // const handleNext = useCallback(() => {
-  //   if (selectedIndexes[0] < questions.length - 1) {
-  //     const newIndex = selectedIndexes[0] + 1;
-  //     setSelectedIndexes([selectedIndexes[0] + 1]);
-  //     sessionStorage.setItem("selectedQuestionIndex", newIndex.toString());
-  //   }
-  // }, [selectedIndexes, questions.length]);
 
   // Handle keydown events
   const handleKeyDown = useCallback(
@@ -1157,7 +1112,7 @@ const QuestionComponent: React.FC = () => {
     }
   }, []);
 
-  document.addEventListener("contextmenu", (e) => e.preventDefault());
+  // document.addEventListener("contextmenu", (e) => e.preventDefault());
 
   // document.addEventListener("keydown", function (e) {
   //   // Disable F12
@@ -1337,21 +1292,6 @@ const QuestionComponent: React.FC = () => {
       />
     );
   }
-
-  const handleSectorClick = (sector) => {
-    setActiveSector(sector);
-
-    // Find the first question of the selected sector
-    const sectorQuestions = questions.filter(
-      (question) => question.sector === sector
-    );
-    if (sectorQuestions.length > 0) {
-      const firstQuestionIndex = questions.findIndex(
-        (q) => q._id === sectorQuestions[0]._id
-      );
-      setSelectedIndexes([firstQuestionIndex]);
-    }
-  };
 
   if (loading) {
     return (
@@ -1660,367 +1600,16 @@ const QuestionComponent: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="max-w-screen h-full flex items-center justify-between pl-10 gap-5 bg-slate-50">
-                    <div className="max-w-[calc(100vw-160px)] min-w-[calc(100vw-160px)] max-h-[72vh] flex items-center justify-between gap-2">
+                  <div className="w-full h-full flex items-center justify-between pl-10 gap-5 bg-slate-50">
+                    <div className="w-full max-h-[72vh] flex items-center justify-between gap-2">
                       {/* Left Panel */}
                       <div
-                        className="h-full min-w-[500px] w-full p-1"
+                        className="h-full min-w-[500px] p-1"
                         style={{
                           width: `${leftWidth}%`,
                         }}
                       >
-                        <div className="gap-5 w-full flex flex-col">
-                          <div
-                            className="w-full h-14 flex items-center justify-between px-4 text-cyan-900 bg-white border-[2px] border-[#155e75] rounded-xl"
-                            style={{ boxShadow: "0px 2.5px 0px 0px #155e75" }}
-                          >
-                            <div className="flex gap-2">
-                              {sectors.length > 0 ? (
-                                sectors.map((sector, index) => (
-                                  <button
-                                    key={index}
-                                    className={`cursor-pointer flex gap-1.5 text-[13.5px] poppins rounded-lg px-4 py-2 ${
-                                      activeSector === sector
-                                        ? "bg-[#155e75] text-white"
-                                        : "bg-white text-[#155e75]"
-                                    }`}
-                                    onClick={() => handleSectorClick(sector)}
-                                  >
-                                    {sector}
-                                    <span
-                                      className={`w-[20px] h-[20px] poppins text-white rounded-full flex items-center justify-center bg-cyan-900 ${
-                                        activeSector === sector
-                                          ? "bg-white text-[#155e75]"
-                                          : "bg-[#155e75] text-white"
-                                      }`}
-                                    >
-                                      {sectorCounts[sector]}
-                                    </span>
-                                  </button>
-                                ))
-                              ) : (
-                                <p>No sectors available</p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div
-                            className="w-full h-14 flex items-center justify-between px-4 text-cyan-900 bg-white border-[2px] border-[#155e75] rounded-xl"
-                            style={{
-                              boxShadow: "0px 2.5px 0px 0px #155e75",
-                            }}
-                          >
-                            <div className="">
-                              {questions.map((question, index) =>
-                                selectedIndexes.includes(index) ? (
-                                  <p className="font-medium flex">
-                                    {question.required && (
-                                      <p className="text-red-600 mr-0.5">*</p>
-                                    )}
-                                    Question No: {index + 1} {" / "}
-                                    {questions.length}
-                                  </p>
-                                ) : null
-                              )}
-                            </div>
-                            {questions.map((question, index) =>
-                              selectedIndexes.includes(index) ? (
-                                <div className="">
-                                  {question.required && (
-                                    <p className="text-red-600 mr-0.5 font-medium">
-                                      Important
-                                    </p>
-                                  )}
-                                </div>
-                              ) : null
-                            )}
-                            <div
-                              className="cursor-pointer"
-                              onClick={handleBookmarkClick}
-                            >
-                              {isBookmarked ? (
-                                <BookmarkIcon />
-                              ) : (
-                                <BookmarkBorderIcon />
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Questions */}
-                          <form
-                            ref={formRef}
-                            onSubmit={() => handleSubmit}
-                            className="px-10 py-8 h-auto bg-white overflow-hidden select-none rounded-xl border-[2px] border-[#155e75]"
-                            style={{
-                              boxShadow: "0px 2.5px 0px 0px #155e75",
-                            }}
-                          >
-                            {questions.map((question, index) =>
-                              selectedIndexes.includes(index) ? (
-                                <div
-                                  className="h-[46vh] overflow-y-scroll"
-                                  key={question._id}
-                                >
-                                  <div className="mt-4 flex">
-                                    {splitText(question.questionText).map(
-                                      (part, index) => {
-                                        // Handle code part rendering
-                                        if (part.type === "code") {
-                                          return (
-                                            <pre
-                                              key={index}
-                                              className="mb-2 max-h-[200px] w-full rounded-lg bg-[#011827] overflow-scroll"
-                                            >
-                                              <SyntaxHighlighter
-                                                language="javascript"
-                                                style={nightOwl}
-                                              >
-                                                {part.content}
-                                              </SyntaxHighlighter>
-                                            </pre>
-                                          );
-                                        }
-
-                                        // Handle bold part rendering (split by lines)
-                                        if (part.type === "bold") {
-                                          return part.content
-                                            .split("\n")
-                                            .map((line, lineIdx) => (
-                                              <p
-                                                key={lineIdx}
-                                                className="font-bold text-black leading-6"
-                                              >
-                                                {part.content.trim()}
-                                              </p>
-                                            ));
-                                        }
-
-                                        // For regular text part
-                                        return part.content
-                                          .split("\n")
-                                          .map((line, lineIdx) => {
-                                            // Check if the line starts with a bullet point (•) or ends with a period
-                                            if (line.trim().startsWith("•")) {
-                                              return (
-                                                <p
-                                                  key={lineIdx}
-                                                  className="text-[14px] poppins0 text-black leading-6"
-                                                >
-                                                  <span className="list-disc pl-6">
-                                                    {line.trim()}
-                                                  </span>
-                                                </p>
-                                              );
-                                            }
-
-                                            // For normal lines (just regular text)
-                                            return (
-                                              <p
-                                                key={lineIdx}
-                                                className="text-[14px] poppins text-black leading-6"
-                                              >
-                                                {line.trim()}
-                                              </p>
-                                            );
-                                          });
-                                      }
-                                    )}
-                                  </div>
-
-                                  <div className="h-[1px] mt-2 w-full opacity-20 bg-cyan-800 rounded-lg"></div>
-
-                                  <FormControl
-                                    component="fieldset"
-                                    style={{ margin: "20px 0" }}
-                                    className="w-full"
-                                  >
-                                    {/* Text Input */}
-                                    {question.inputType === "Text Input" && (
-                                      <textarea
-                                        placeholder="Type your answer here!"
-                                        onChange={(e) =>
-                                          handleInputChange(
-                                            question._id,
-                                            e.target.value
-                                          )
-                                        }
-                                        value={
-                                          selectedAnswers[question._id]?.[0] ||
-                                          ""
-                                        }
-                                        className="w-full h-[40vh] focus:outline-none resize-none"
-                                      />
-                                    )}
-
-                                    {/* Select Dropdown */}
-                                    {question.inputType === "Select" && (
-                                      <Select
-                                        value={
-                                          selectedAnswers[question._id]?.[0]
-                                        }
-                                        onChange={(e) =>
-                                          handleSingleAnswerChange(
-                                            question._id,
-                                            e.target.value
-                                          )
-                                        }
-                                        fullWidth
-                                        style={{ marginTop: "10px" }}
-                                        displayEmpty
-                                        renderValue={(selected) =>
-                                          typeof selected === "number" ? (
-                                            question.options[selected] // Display the corresponding option text for the index
-                                          ) : (
-                                            <p className="text-gray-500">
-                                              Select answer
-                                            </p>
-                                          )
-                                        }
-                                        MenuProps={{
-                                          PaperProps: {
-                                            style: {
-                                              maxHeight: 48 * 4.5 + 8, // Adjust as needed
-                                              width: 250,
-                                            },
-                                          },
-                                          disableAutoFocusItem: true, // Prevent automatic closing
-                                        }}
-                                      >
-                                        <MenuItem value="" disabled>
-                                          Select answer
-                                        </MenuItem>
-                                        {question.options.map(
-                                          (option, index) => (
-                                            <MenuItem key={index} value={index}>
-                                              {" "}
-                                              {/* Use index as the value */}
-                                              {option}
-                                            </MenuItem>
-                                          )
-                                        )}
-                                      </Select>
-                                    )}
-
-                                    {/* Radio Buttons */}
-                                    {question.inputType === "Radio" && (
-                                      <RadioGroup
-                                        className="h-[40vh]"
-                                        value={
-                                          selectedAnswers[question._id]?.[0]
-                                        }
-                                        onChange={(e) =>
-                                          handleSingleAnswerChange(
-                                            question._id,
-                                            e.target.value
-                                          )
-                                        }
-                                        style={{ marginTop: "10px" }}
-                                      >
-                                        {question.options.map(
-                                          (option, index) => (
-                                            <FormControlLabel
-                                              key={index}
-                                              value={index} // Use index as numeric value
-                                              control={
-                                                <BpRadio
-                                                  icon={<BpIcon />} // Pass the custom icon to the radio button
-                                                />
-                                              }
-                                              label={option}
-                                            />
-                                          )
-                                        )}
-                                      </RadioGroup>
-                                    )}
-
-                                    {/* Multiple Choice (Checkboxes) */}
-                                    {question.inputType ===
-                                      "Multiple Choice" && (
-                                      <FormGroup className="h-[40vh]">
-                                        {question.options.map(
-                                          (option, index) => (
-                                            <FormControlLabel
-                                              key={index}
-                                              control={
-                                                <BpCheckbox
-                                                  checked={selectedAnswers[
-                                                    question._id
-                                                  ]?.includes(index)}
-                                                  onChange={(e) =>
-                                                    handleMultipleChoiceChange(
-                                                      question._id,
-                                                      index,
-                                                      e.target.checked
-                                                    )
-                                                  }
-                                                />
-                                              }
-                                              label={option}
-                                            />
-                                          )
-                                        )}
-                                      </FormGroup>
-                                    )}
-                                  </FormControl>
-                                </div>
-                              ) : null
-                            )}
-                          </form>
-
-                          {/* Pagination Controls */}
-                          <div
-                            className="w-full h-16 flex items-center justify-between px-4 border-[2px] border-[#155e75] text-slate-600 bg-white rounded-xl"
-                            style={{
-                              boxShadow: "0px 2.5px 0px 0px #155e75",
-                            }}
-                          >
-                            <div className="flex gap-7">
-                              <h1 className="text-[#164e63]">
-                                Focus & Conquer!
-                              </h1>
-                            </div>
-                            <Box
-                              sx={{
-                                display: "flex",
-                                gap: "12px",
-                                color: "#164e63",
-                                alignItems: "center",
-                              }}
-                            >
-                              <button
-                                className={`text-[15px] font-medium py-2 px-3 rounded-md ${
-                                  selectedIndexes[0] === 0
-                                    ? "bg-slate-100 cursor-not-allowed"
-                                    : "bg-slate-100 hover:bg-cyan-800 hover:text-slate-100"
-                                }`}
-                                onClick={handlePrevious}
-                                disabled={selectedIndexes[0] === 0}
-                              >
-                                <ArrowBackIosNewIcon
-                                  style={{ fontSize: "15px" }}
-                                />
-                                Prev
-                              </button>
-
-                              <button
-                                className={`text-[15px] font-medium py-2 px-3 rounded-md ${
-                                  selectedIndexes[0] === questions.length - 1
-                                    ? "bg-slate-100 cursor-not-allowed"
-                                    : "bg-slate-100 hover:bg-cyan-800 hover:text-slate-100"
-                                }`}
-                                onClick={handleNext}
-                                disabled={
-                                  selectedIndexes[0] === questions.length - 1
-                                }
-                              >
-                                Next{" "}
-                                <ArrowForwardIosIcon
-                                  style={{ fontSize: "15px" }}
-                                />
-                              </button>
-                            </Box>
-                          </div>
-                        </div>
+                        <QuestionsBySector testId={testId} />
                       </div>
 
                       {/* Resizable Divider with Thumb */}
@@ -2182,7 +1771,7 @@ const QuestionComponent: React.FC = () => {
 
                   {/* Progress Loader */}
                   <div
-                    className="bg-white w-full h-10 items-center justify-center flex"
+                    className="bg-white w-full h-16 items-center justify-center flex"
                     style={{
                       boxShadow: "0px 0px 10px 0px #cbd5e1",
                     }}
@@ -2194,7 +1783,7 @@ const QuestionComponent: React.FC = () => {
                         width: "90vw",
                         backgroundColor: "#b1d5dc",
                         borderRadius: "8px",
-                        height: "8px",
+                        height: "13px",
                       }}
                     >
                       <div
