@@ -15,10 +15,14 @@ import {
   Pagination,
   Checkbox,
 } from "@nextui-org/react";
-import { Modal } from "antd";
+import { Modal, Upload } from "antd";
 import { PlusIcon } from "./NextUI/PlusIcon.jsx";
 import { VerticalDotsIcon } from "./NextUI/VerticalDotsIcon";
 import { SearchIcon } from "./NextUI/SearchIcon.jsx";
+import * as XLSX from "xlsx";
+import { InboxOutlined } from "@ant-design/icons";
+
+const { Dragger } = Upload;
 
 type Candidate = {
   _id: string;
@@ -38,6 +42,7 @@ const reorderColumns = (columns, fromIndex, toIndex) => {
 
 export default function CreateCandidates() {
   const [selectedItems, setSelectedItems] = useState([]);
+  const [isImportVisible, setImportVisible] = useState(false);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [filterValue, setFilterValue] = useState("");
   // Retrieve stored values or default to 1 for page and 5 for rows per page
@@ -238,6 +243,89 @@ export default function CreateCandidates() {
 
     setAddVisible(false);
     setProfilePictureFile(null);
+  };
+
+  const convertExcelDateToISO = (excelDate) => {
+    // Adjust for Excel's 1900-based system and handle leap year bug
+    const daysSinceBase = excelDate - 25569; // Excel's base date starts at 1900-01-01
+
+    // Convert to JavaScript's time (milliseconds since 1970-01-01)
+    const date = new Date(daysSinceBase * 86400 * 1000); // 86400 seconds in a day
+
+    // Format the date as "DD/MM/YYYY"
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-based
+    const year = date.getFullYear();
+
+    return `${day}/${month}/${year}`;
+  };
+
+  const handleFileUpload = async (file) => {
+    const reader = new FileReader();
+
+    reader.onload = async (e) => {
+      const abuf = e.target.result;
+      const wb = XLSX.read(abuf, { type: "array" });
+
+      // Get the first sheet data
+      const ws = wb.Sheets[wb.SheetNames[0]];
+
+      // Parse the sheet into JSON format
+      let candidateData = XLSX.utils.sheet_to_json(ws);
+
+      // Convert the dob and phone to correct formats
+      candidateData = candidateData.map((row) => ({
+        ...row,
+        dob: row.dob ? convertExcelDateToISO(row.dob) : null, // Convert dob if it exists
+        phone: row.phone ? row.phone.toString() : "", // Ensure phone is a string
+      }));
+
+      console.log(candidateData); // Check the parsed data
+
+      // Validate if data contains the required columns
+      const requiredColumns = ["email", "registerNumber", "dob", "phone"];
+      const isValid = candidateData.every((row) =>
+        requiredColumns.every(
+          (col) => row[col] && row[col].toString().trim() !== ""
+        )
+      );
+
+      if (isValid) {
+        await importCandidatesToDB(candidateData); // Send to backend API
+      } else {
+        alert(
+          "Invalid file format. Ensure there are 4 columns: registerNumber, dob, email, phone."
+        );
+      }
+    };
+
+    reader.readAsArrayBuffer(file);
+  };
+
+  // Function to send the candidate data to the backend for import
+  const importCandidatesToDB = async (candidateData) => {
+    try {
+      const response = await fetch(
+        "http://localhost:20000/api/importCandidates",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ candidates: candidateData }), // Send candidate data as JSON
+        }
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(result.message); // Show success message
+      } else {
+        alert("Failed to import candidates.");
+      }
+    } catch (error) {
+      console.error("Error uploading candidates:", error);
+      alert("An error occurred while uploading candidates.");
+    }
   };
 
   const handleDelete = async (candidateId: string) => {
@@ -484,7 +572,7 @@ export default function CreateCandidates() {
           startContent={<SearchIcon className="text-default-300" />}
           variant="bordered"
           classNames={{
-            base: "w-full sm:max-w-[44%]",
+            base: "w-full",
             inputWrapper: "border-1",
           }}
           onClear={() => setFilterValue("")}
@@ -497,15 +585,22 @@ export default function CreateCandidates() {
             <Button
               onClick={() => handleReorder(0, 4)}
               size="sm"
-              className="mr-2 h-9 bg-neutral-300"
+              className="mr-3 h-9 bg-neutral-300"
             >
               Reorder Columns
             </Button>
           )}
           <Button
-            className="bg-foreground w-32 h-10 text-background"
-            endContent={<PlusIcon width={undefined} height={undefined} />}
+            onClick={() => setImportVisible(true)}
             size="sm"
+            className="mr-2 h-9 bg-neutral-300"
+          >
+            Import Candidates
+          </Button>
+          <Button
+            className="bg-foreground text-background"
+            endContent={<PlusIcon width={undefined} height={undefined} />}
+            size="md"
             onClick={() => setAddVisible(true)}
           >
             Add New
@@ -513,7 +608,31 @@ export default function CreateCandidates() {
         </div>
       </div>
 
-      <div className="flex justify-between items-center h-[50px] mt-3 px-5">
+      <Modal
+        open={isImportVisible}
+        onCancel={() => setImportVisible(false)}
+        footer={null}
+        closable={false}
+      >
+        <h2>Import Candidates</h2>
+        <Dragger
+          beforeUpload={handleFileUpload}
+          multiple={false}
+          accept=".xls, .xlsx, .csv"
+        >
+          <p className="ant-upload-drag-icon">
+            <InboxOutlined />
+          </p>
+          <p className="ant-upload-text">
+            Click or drag file to this area to upload
+          </p>
+          <p className="ant-upload-hint">
+            Only .xls, .xlsx, .csv files are allowed
+          </p>
+        </Dragger>
+      </Modal>
+
+      <div className="flex justify-between items-center h-[50px] px-5">
         {selectedRows.length > 0 ? (
           <Button
             className="bg-foreground px-6 text-background"
@@ -610,6 +729,9 @@ export default function CreateCandidates() {
             isCompact
             size="md"
             showControls={true}
+            classNames={{
+              cursor: "bg-black text-white font-bold",
+            }}
           />
         </div>
       )}

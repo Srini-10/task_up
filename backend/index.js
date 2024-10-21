@@ -169,6 +169,67 @@ app.post(
   }
 );
 
+app.post("/api/importCandidates", async (req, res) => {
+  try {
+    const { candidates } = req.body; // Array of candidate data
+
+    // Validate the data format before proceeding
+    if (!Array.isArray(candidates) || candidates.length === 0) {
+      return res.status(400).json({ message: "Invalid candidates data." });
+    }
+
+    // Check for existing candidates based on registerNumber
+    const existingCandidates = await CreateCandidate.find({
+      registerNumber: {
+        $in: candidates.map((candidate) => candidate.registerNumber),
+      },
+    });
+
+    // Log existing candidates for debugging
+    console.log("Existing Candidates:", existingCandidates);
+
+    // Prepare data for bulk insert or update
+    const bulkOps = candidates.map((candidate) => {
+      // Check if the candidate already exists in the database
+      const existingCandidate = existingCandidates.find(
+        (existing) => existing.registerNumber === candidate.registerNumber
+      );
+
+      return {
+        updateOne: {
+          filter: { registerNumber: candidate.registerNumber },
+          update: {
+            $set: {
+              // Update all fields regardless of whether the candidate is new or existing
+              registerNumber: candidate.registerNumber,
+              dob: candidate.dob,
+              email: candidate.email,
+              phone: candidate.phone,
+              profilePicture: candidate.profilePicture || null, // Handle profile picture
+            },
+          },
+          upsert: true, // Insert if the candidate doesn't exist, else update
+        },
+      };
+    });
+
+    // Perform bulk insert or update
+    const result = await CreateCandidate.bulkWrite(bulkOps);
+
+    // Log the result for debugging
+    console.log("Bulk Write Result:", result);
+
+    // Respond to the client with the number of upserted candidates
+    res.status(200).json({
+      message: `${result.upsertedCount} candidates inserted, ${result.modifiedCount} candidates updated successfully.`,
+      result, // Include result in response for further debugging if needed
+    });
+  } catch (error) {
+    console.error("Error importing candidates:", error);
+    res.status(500).json({ message: "Error importing candidates." });
+  }
+});
+
 // PUT: Update existing candidate details
 app.put(
   "/api/testCandidates/:id",
