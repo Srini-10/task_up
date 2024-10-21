@@ -274,10 +274,15 @@ export default function CreateCandidates() {
       let candidateData = XLSX.utils.sheet_to_json(ws);
 
       // Convert the dob and phone to correct formats
+      // Convert the dob, phone, and convert email and registerNumber to lowercase
       candidateData = candidateData.map((row) => ({
         ...row,
         dob: row.dob ? convertExcelDateToISO(row.dob) : null, // Convert dob if it exists
-        phone: row.phone ? row.phone.toString() : "", // Ensure phone is a string
+        phone: row.phone ? row.phone.toString().toLowerCase() : "", // Ensure phone is a string and lowercase
+        email: row.email ? row.email.toLowerCase() : "", // Convert email to lowercase
+        registerNumber: row.registerNumber
+          ? row.registerNumber.toUpperCase()
+          : "", // Convert registerNumber to lowercase
       }));
 
       console.log(candidateData); // Check the parsed data

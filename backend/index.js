@@ -178,29 +178,56 @@ app.post("/api/importCandidates", async (req, res) => {
       return res.status(400).json({ message: "Invalid candidates data." });
     }
 
-    // Check for existing candidates based on registerNumber
+    // Check for existing candidates based on registerNumber, email, or phone
     const existingCandidates = await CreateCandidate.find({
-      registerNumber: {
-        $in: candidates.map((candidate) => candidate.registerNumber),
-      },
+      $or: [
+        {
+          registerNumber: {
+            $in: candidates.map((candidate) => candidate.registerNumber),
+          },
+        },
+        { email: { $in: candidates.map((candidate) => candidate.email) } },
+        { phone: { $in: candidates.map((candidate) => candidate.phone) } },
+      ],
     });
 
     // Log existing candidates for debugging
     console.log("Existing Candidates:", existingCandidates);
 
     // Prepare data for bulk insert or update
-    const bulkOps = candidates.map((candidate) => {
-      // Check if the candidate already exists in the database
+    const bulkOps = [];
+
+    // Create a map to track duplicates within the input data itself
+    const candidateMap = new Map();
+
+    candidates.forEach((candidate) => {
+      // Normalize the key based on unique identifiers (registerNumber, email, phone)
+      const key = `${candidate.registerNumber}-${candidate.email}-${candidate.phone}`;
+
+      // Store the latest occurrence of the candidate (in case of duplicates)
+      candidateMap.set(key, candidate);
+    });
+
+    // Loop over the candidateMap values (which are the last versions of candidates with the same keys)
+    candidateMap.forEach((candidate) => {
       const existingCandidate = existingCandidates.find(
-        (existing) => existing.registerNumber === candidate.registerNumber
+        (existing) =>
+          existing.registerNumber === candidate.registerNumber ||
+          existing.email === candidate.email ||
+          existing.phone === candidate.phone
       );
 
-      return {
+      bulkOps.push({
         updateOne: {
-          filter: { registerNumber: candidate.registerNumber },
+          filter: {
+            $or: [
+              { registerNumber: candidate.registerNumber },
+              { email: candidate.email },
+              { phone: candidate.phone },
+            ],
+          },
           update: {
             $set: {
-              // Update all fields regardless of whether the candidate is new or existing
               registerNumber: candidate.registerNumber,
               dob: candidate.dob,
               email: candidate.email,
@@ -208,22 +235,26 @@ app.post("/api/importCandidates", async (req, res) => {
               profilePicture: candidate.profilePicture || null, // Handle profile picture
             },
           },
-          upsert: true, // Insert if the candidate doesn't exist, else update
+          upsert: true, // Insert if not found, otherwise update
         },
-      };
+      });
     });
 
     // Perform bulk insert or update
-    const result = await CreateCandidate.bulkWrite(bulkOps);
+    if (bulkOps.length > 0) {
+      const result = await CreateCandidate.bulkWrite(bulkOps);
 
-    // Log the result for debugging
-    console.log("Bulk Write Result:", result);
+      // Log the result for debugging
+      console.log("Bulk Write Result:", result);
 
-    // Respond to the client with the number of upserted candidates
-    res.status(200).json({
-      message: `${result.upsertedCount} candidates inserted, ${result.modifiedCount} candidates updated successfully.`,
-      result, // Include result in response for further debugging if needed
-    });
+      // Respond to the client with the number of upserted candidates
+      res.status(200).json({
+        message: `${result.upsertedCount} candidates inserted, ${result.modifiedCount} candidates updated successfully.`,
+        result, // Include result in response for further debugging if needed
+      });
+    } else {
+      res.status(400).json({ message: "No candidates to import." });
+    }
   } catch (error) {
     console.error("Error importing candidates:", error);
     res.status(500).json({ message: "Error importing candidates." });
