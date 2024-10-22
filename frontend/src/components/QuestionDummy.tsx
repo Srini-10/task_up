@@ -70,7 +70,7 @@ const QuestionComponent: React.FC = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [registerNumber, setRegisterNumber] = useState("");
+  const [name, setname] = useState("");
   const [dob, setDob] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [useEmailAuth, setUseEmailAuth] = useState(false);
@@ -337,9 +337,9 @@ const QuestionComponent: React.FC = () => {
 
       // Retrieve authentication data from session storage
       const authData = JSON.parse(sessionStorage.getItem("authData") || "{}");
-      const { email, registerNumber, phone, dob } = authData;
+      const { email, name, phone, dob } = authData;
 
-      if (!email || !registerNumber) {
+      if (!email || !name) {
         showToast("Authentication details not available. Please login again.");
         setSubmitLoading(false);
         return;
@@ -374,7 +374,7 @@ const QuestionComponent: React.FC = () => {
           `http://localhost:20000/api/tests/${testId}/submit`,
           {
             email,
-            registerNumber,
+            name,
             phone,
             dob,
             answers,
@@ -390,7 +390,7 @@ const QuestionComponent: React.FC = () => {
         const saveSubmissionPayload = {
           testId,
           email,
-          registerNumber,
+          name,
           phone,
           dob,
           questions: fullQuestions,
@@ -452,9 +452,9 @@ const QuestionComponent: React.FC = () => {
 
       // Retrieve authentication data from session storage
       const authData = JSON.parse(sessionStorage.getItem("authData") || "{}");
-      const { email, registerNumber, phone, dob } = authData;
+      const { email, name, phone, dob } = authData;
 
-      if (!email || !registerNumber) {
+      if (!email || !name) {
         showToast("Authentication details not available. Please login again.");
         setSubmitLoading(false);
         return;
@@ -490,7 +490,7 @@ const QuestionComponent: React.FC = () => {
           `http://localhost:20000/api/tests/${testId}/submit`,
           {
             email,
-            registerNumber,
+            name,
             phone,
             dob,
             answers,
@@ -506,7 +506,7 @@ const QuestionComponent: React.FC = () => {
         const saveSubmissionPayload = {
           testId,
           email,
-          registerNumber,
+          name,
           phone,
           dob,
           questions: fullQuestions,
@@ -670,13 +670,13 @@ const QuestionComponent: React.FC = () => {
   useEffect(() => {
     // Load stored input values from sessionStorage
     const storedTestName = sessionStorage.getItem("testName");
-    const storedRegisterNumber = sessionStorage.getItem("registerNumber");
+    const storedname = sessionStorage.getItem("name");
     const storedDob = sessionStorage.getItem("dob");
     const storedEmail = sessionStorage.getItem("email");
     const storedPhone = sessionStorage.getItem("phone");
 
     if (storedTestName) setTestName(storedTestName);
-    if (storedRegisterNumber) setRegisterNumber(storedRegisterNumber);
+    if (storedname) setname(storedname);
     if (storedDob) setDob(storedDob);
     if (storedEmail) setEmail(storedEmail);
     if (storedPhone) setPhone(storedPhone);
@@ -723,11 +723,11 @@ const QuestionComponent: React.FC = () => {
   // Store input field values in sessionStorage whenever they change
   useEffect(() => {
     sessionStorage.setItem("testName", testName);
-    sessionStorage.setItem("registerNumber", registerNumber);
+    sessionStorage.setItem("name", name);
     sessionStorage.setItem("dob", dob);
     sessionStorage.setItem("email", email);
     sessionStorage.setItem("phone", phone);
-  }, [testName, registerNumber, dob, email, phone]);
+  }, [testName, name, dob, email, phone]);
 
   // Store selected answers in sessionStorage whenever they change
   useEffect(() => {
@@ -735,11 +735,11 @@ const QuestionComponent: React.FC = () => {
   }, [selectedAnswers]);
 
   // Check if user has already submitted the test
-  const checkTestSubmission = async (email: string, registerNumber: string) => {
+  const checkTestSubmission = async (email: string, name: string) => {
     try {
       const response = await axios.post(
         `http://localhost:20000/api/tests/${testId}/check-submission`,
-        { email, registerNumber }
+        { email, name }
       );
 
       console.log("API response:", response.data);
@@ -801,7 +801,7 @@ const QuestionComponent: React.FC = () => {
     try {
       const response = await axios.post(
         `http://localhost:20000/api/tests/${testId}/authenticate`,
-        { registerNumber, dob, email, phone }
+        { name, dob, email, phone }
       );
 
       if (response.data.useEmailAuth) {
@@ -812,7 +812,7 @@ const QuestionComponent: React.FC = () => {
           "authData",
           JSON.stringify({
             testId,
-            registerNumber: response.data.registerNumber,
+            name: response.data.name,
             email: response.data.email,
             phone: response.data.phone,
             dob: response.data.dob,
@@ -820,10 +820,7 @@ const QuestionComponent: React.FC = () => {
         );
 
         // Call checkTestSubmission to verify test status
-        await checkTestSubmission(
-          response.data.email,
-          response.data.registerNumber
-        );
+        await checkTestSubmission(response.data.email, response.data.name);
 
         // Update isAuthenticated state to true
         setIsAuthenticated(true);
@@ -928,7 +925,7 @@ const QuestionComponent: React.FC = () => {
     sessionStorage.removeItem("isSubmissionSuccessful");
     localStorage.removeItem("isTestSubmitted");
     setTestName("");
-    setRegisterNumber("");
+    setname("");
     setDob("");
     setEmail("");
     setPhone("");
@@ -1467,8 +1464,8 @@ const QuestionComponent: React.FC = () => {
                               border: "none",
                               boxShadow: "none",
                             }}
-                            value={registerNumber}
-                            onChange={(e) => setRegisterNumber(e.target.value)}
+                            value={name}
+                            onChange={(e) => setname(e.target.value)}
                             required
                           />
                           <Input

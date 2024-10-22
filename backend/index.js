@@ -83,15 +83,14 @@ const TestSchema = new mongoose.Schema({
   questions: [QuestionSchema],
   candidates: [
     {
+      name: { type: String, required: true },
       email: { type: String, required: true },
       phone: { type: String, required: true },
-      registerNumber: { type: String, required: true },
-      dob: { type: String, required: true },
     },
   ],
   submissions: [
     {
-      registerNumber: String,
+      name: String,
       marks: Number,
       submissionTime: { type: Date, default: Date.now },
       malpractice: { type: String, default: "false" },
@@ -131,40 +130,37 @@ app.post(
   }
 );
 
-// POST route to register a new candidate
+// POST route to Create a new candidate
 app.post(
   "/api/testCandidates",
   upload.single("profilePicture"),
   async (req, res) => {
     try {
-      const { registerNumber, dob, email, phone } = req.body;
+      const { name, email, phone } = req.body;
       const profilePicture = req.file ? req.file.filename : null;
 
-      // Check if register number exists
+      // Check if Candidate exists
       const existingCandidate = await CreateCandidate.findOne({
-        registerNumber,
+        email,
       });
 
       if (existingCandidate) {
-        return res
-          .status(400)
-          .json({ message: "Register number already exists" });
+        return res.status(400).json({ message: "Candidate already exists" });
       }
 
       // Save the candidate data to MongoDB
       const newCandidate = new CreateCandidate({
-        registerNumber,
-        dob,
+        name,
         email,
         phone,
         profilePicture, // Save the file name in the database
       });
 
       await newCandidate.save();
-      res.status(201).json({ message: "candidate registered successfully!" });
+      res.status(201).json({ message: "candidate created successfully!" });
     } catch (error) {
-      console.error("Error registering candidate:", error);
-      res.status(500).json({ message: "Error registering candidate." });
+      console.error("Error creating candidate:", error);
+      res.status(500).json({ message: "Error creating candidate." });
     }
   }
 );
@@ -178,12 +174,12 @@ app.post("/api/importCandidates", async (req, res) => {
       return res.status(400).json({ message: "Invalid candidates data." });
     }
 
-    // Check for existing candidates based on registerNumber, email, or phone
+    // Check for existing candidates based on name, email, or phone
     const existingCandidates = await CreateCandidate.find({
       $or: [
         {
-          registerNumber: {
-            $in: candidates.map((candidate) => candidate.registerNumber),
+          name: {
+            $in: candidates.map((candidate) => candidate.name),
           },
         },
         { email: { $in: candidates.map((candidate) => candidate.email) } },
@@ -201,8 +197,8 @@ app.post("/api/importCandidates", async (req, res) => {
     const candidateMap = new Map();
 
     candidates.forEach((candidate) => {
-      // Normalize the key based on unique identifiers (registerNumber, email, phone)
-      const key = `${candidate.registerNumber}-${candidate.email}-${candidate.phone}`;
+      // Normalize the key based on unique identifiers (name, email, phone)
+      const key = `${candidate.name}-${candidate.email}-${candidate.phone}`;
 
       // Store the latest occurrence of the candidate (in case of duplicates)
       candidateMap.set(key, candidate);
@@ -212,7 +208,7 @@ app.post("/api/importCandidates", async (req, res) => {
     candidateMap.forEach((candidate) => {
       const existingCandidate = existingCandidates.find(
         (existing) =>
-          existing.registerNumber === candidate.registerNumber ||
+          existing.name === candidate.name ||
           existing.email === candidate.email ||
           existing.phone === candidate.phone
       );
@@ -221,15 +217,14 @@ app.post("/api/importCandidates", async (req, res) => {
         updateOne: {
           filter: {
             $or: [
-              { registerNumber: candidate.registerNumber },
+              { name: candidate.name },
               { email: candidate.email },
               { phone: candidate.phone },
             ],
           },
           update: {
             $set: {
-              registerNumber: candidate.registerNumber,
-              dob: candidate.dob,
+              name: candidate.name,
               email: candidate.email,
               phone: candidate.phone,
               profilePicture: candidate.profilePicture || null, // Handle profile picture
@@ -268,23 +263,20 @@ app.put(
   async (req, res) => {
     try {
       const { id } = req.params;
-      const { _id, registerNumber, dob, email, phone } = req.body;
+      const { _id, name, email, phone } = req.body;
 
-      // Check if register number exists
+      // Check if Candidate exists
       const existingCandidate = await CreateCandidate.findOne({
-        registerNumber,
+        email,
       });
 
       if (existingCandidate) {
-        return res
-          .status(400)
-          .json({ message: "Register number already exists" });
+        return res.status(400).json({ message: "Candidate already exists" });
       }
 
       const updatedFields = {
         _id,
-        registerNumber,
-        dob,
+        name,
         email,
         phone,
       };
@@ -362,15 +354,10 @@ app.post("/api/tests", async (req, res) => {
     // Validate and format candidate data if it exists
     const formattedCandidates = candidates
       .filter(
-        (candidate) =>
-          candidate.registerNumber &&
-          candidate.dob &&
-          candidate.email &&
-          candidate.phone
+        (candidate) => candidate.name && candidate.email && candidate.phone
       )
       .map((candidate) => ({
-        registerNumber: candidate.registerNumber,
-        dob: candidate.dob,
+        name: candidate.name,
         email: candidate.email,
         phone: candidate.phone,
       }));
@@ -481,7 +468,7 @@ app.get("/api/tests/:testId/submissions-count", async (req, res) => {
   }
 });
 
-// Get total submitted users' register numbers and total scores for a specific test
+// Get total submitted users' name, email and total scores for a specific test
 app.get("/api/tests/:testId/ranking", async (req, res) => {
   const { testId } = req.params;
 
@@ -497,7 +484,7 @@ app.get("/api/tests/:testId/ranking", async (req, res) => {
 
     // Map over all submissions and include all details for the rankings
     const rankings = submissions.map((submission) => ({
-      registerNumber: submission.registerNumber,
+      name: submission.name,
       email: submission.email,
       marks: submission.score,
       submissionTime: submission.submittedAt,
@@ -716,7 +703,7 @@ app.post("/api/tests/:testId/authenticate-password", async (req, res) => {
 });
 
 app.post("/api/tests/:testId/authenticate", async (req, res) => {
-  const { registerNumber, dob, email, phone } = req.body;
+  const { name, email, phone } = req.body;
   const { testId } = req.params;
 
   try {
@@ -726,17 +713,13 @@ app.post("/api/tests/:testId/authenticate", async (req, res) => {
       return res.status(404).json({ message: "Test not found" });
     }
 
-    console.log("Received registerNumber:", registerNumber);
-    console.log("Received dob:", dob);
+    console.log("Received name:", name);
     console.log("Received email:", email);
     console.log("Received phone:", phone);
 
     // Check if the candidate is in the test's candidate list
     const candidate = test.candidates.find(
-      (candidate) =>
-        (candidate.registerNumber === registerNumber &&
-          candidate.dob === dob) ||
-        (candidate.email === email && candidate.phone === phone)
+      (candidate) => candidate.email === email && candidate.phone === phone
     );
 
     if (!candidate) {
@@ -746,7 +729,7 @@ app.post("/api/tests/:testId/authenticate", async (req, res) => {
     // Authentication successful, return the test questions and candidate details
     res.status(200).json({
       questions: test.questions,
-      registerNumber: candidate.registerNumber,
+      name: candidate.name,
       email: candidate.email,
     });
   } catch (error) {
@@ -758,11 +741,11 @@ app.post("/api/tests/:testId/authenticate", async (req, res) => {
 // POST route to submit the test and calculate the score
 app.post("/api/tests/:testId/submit", async (req, res) => {
   const { testId } = req.params;
-  const { answers, registerNumber, email, questions, malpractice } = req.body;
+  const { answers, name, email, questions, malpractice } = req.body;
 
   console.log("Incoming data:", {
+    name,
     email,
-    registerNumber,
     answers,
     questions,
     malpractice,
@@ -841,16 +824,15 @@ app.post("/api/tests/:testId/submit", async (req, res) => {
 });
 
 app.post("/api/tests/:testId/save-submission", async (req, res) => {
-  const { email, registerNumber, answers, score, questions, malpractice } =
-    req.body; // Extract malpractice from the request body
+  const { name, email, answers, score, questions, malpractice } = req.body; // Extract malpractice from the request body
   const { testId } = req.params;
 
   try {
     // Create a new TestSubmission document
     const submission = new TestSubmission({
       testId,
+      name,
       email,
-      registerNumber,
       answers,
       score,
       questions,
@@ -862,8 +844,8 @@ app.post("/api/tests/:testId/save-submission", async (req, res) => {
 
     console.log("Saved data:", {
       testId,
+      name,
       email,
-      registerNumber,
       answers,
       score,
       questions,
@@ -875,8 +857,8 @@ app.post("/api/tests/:testId/save-submission", async (req, res) => {
     await Test.findByIdAndUpdate(testId, {
       $push: {
         submissions: {
+          name,
           email,
-          registerNumber,
           answers,
           marks: score,
           questions,
@@ -900,24 +882,24 @@ app.post("/api/tests/:testId/save-submission", async (req, res) => {
 
 // Assuming you're using Express.js for the backend
 app.post("/api/tests/:testId/check-submission", async (req, res) => {
-  const { email, registerNumber } = req.body;
+  const { name, email } = req.body;
   const { testId } = req.params;
 
   try {
     console.log("Received testId:", testId);
-    console.log("Received registerNumber:", registerNumber);
+    console.log("Received name:", name);
     console.log("Received email:", email);
 
-    // Check if a submission exists for this test and registerNumber
+    // Check if a submission exists for this test and name
     const submission = await TestSubmission.findOne({
       testId,
-      $or: [{ email }, { registerNumber }],
+      $or: [{ email }, { name }],
     });
 
     console.log("Checking for submission with:", {
       testId,
       email,
-      registerNumber,
+      name,
     });
 
     if (submission) {
@@ -933,7 +915,7 @@ app.post("/api/tests/:testId/check-submission", async (req, res) => {
         totalQuestions,
       });
     } else {
-      // No submission exists for this registerNumber in this test
+      // No submission exists for this name in this test
       console.log("No submission found.");
       return res.json({ submitted: false });
     }
@@ -964,15 +946,10 @@ app.put("/api/tests/:testId", async (req, res) => {
     // Validate and format candidate data if it exists
     const formattedCandidates = candidates
       .filter(
-        (candidate) =>
-          candidate.registerNumber &&
-          candidate.dob &&
-          candidate.email &&
-          candidate.phone
+        (candidate) => candidate.name && candidate.email && candidate.phone
       )
       .map((candidate) => ({
-        registerNumber: candidate.registerNumber,
-        dob: candidate.dob,
+        name: candidate.name,
         email: candidate.email,
         phone: candidate.phone,
       }));

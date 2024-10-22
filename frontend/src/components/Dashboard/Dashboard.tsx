@@ -36,7 +36,7 @@ interface Answer {
 }
 
 interface Ranking {
-  registerNumber: string;
+  name: string;
   email: string;
   marks: number;
   submissionTime: Date;
@@ -74,7 +74,7 @@ const Dashboard: React.FC = () => {
     rankings.forEach((ranking, index) => {
       const row: string[] = [
         (index + 1).toString(), // Convert index + 1 to string
-        ranking.registerNumber,
+        ranking.name,
         ranking.email,
         `${formatDateTime(ranking.submissionTime.toString()).date} ${
           formatDateTime(ranking.submissionTime.toString()).time
@@ -317,7 +317,7 @@ const Dashboard: React.FC = () => {
                           rankings.map((ranking, index) => (
                             <TableRow key={index}>
                               <TableCell>{index + 1}</TableCell>
-                              <TableCell>{ranking.registerNumber}</TableCell>
+                              <TableCell>{ranking.name}</TableCell>
                               <TableCell>{ranking.email}</TableCell>
                               <TableCell>
                                 {`${

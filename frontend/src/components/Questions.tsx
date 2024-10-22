@@ -78,10 +78,8 @@ const QuestionComponent: React.FC = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [registerNumber, setRegisterNumber] = useState("");
-  const [dob, setDob] = useState("");
+  const [name, setName] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [useEmailAuth, setUseEmailAuth] = useState(false);
   const [testName, setTestName] = useState("");
   const [selectedAnswers, setSelectedAnswers] = useState(() => {
     const storedAnswers = sessionStorage.getItem("selectedAnswers");
@@ -345,9 +343,9 @@ const QuestionComponent: React.FC = () => {
 
       // Retrieve authentication data from session storage
       const authData = JSON.parse(sessionStorage.getItem("authData") || "{}");
-      const { email, registerNumber, phone, dob } = authData;
+      const { name, email, phone } = authData;
 
-      if (!email || !registerNumber) {
+      if (!email || !name) {
         showToast("Authentication details not available. Please login again.");
         setSubmitLoading(false);
         return;
@@ -381,10 +379,9 @@ const QuestionComponent: React.FC = () => {
         const submissionResponse = await axios.post(
           `http://localhost:20000/api/tests/${testId}/submit`,
           {
+            name,
             email,
-            registerNumber,
             phone,
-            dob,
             answers,
             malpractice: isMalpractice,
           }
@@ -397,10 +394,9 @@ const QuestionComponent: React.FC = () => {
         // Save the submission with both questions and answers
         const saveSubmissionPayload = {
           testId,
+          name,
           email,
-          registerNumber,
           phone,
-          dob,
           questions: fullQuestions,
           answers,
           score,
@@ -460,9 +456,9 @@ const QuestionComponent: React.FC = () => {
 
       // Retrieve authentication data from session storage
       const authData = JSON.parse(sessionStorage.getItem("authData") || "{}");
-      const { email, registerNumber, phone, dob } = authData;
+      const { name, email, phone } = authData;
 
-      if (!email || !registerNumber) {
+      if (!email || !name) {
         showToast("Authentication details not available. Please login again.");
         setSubmitLoading(false);
         return;
@@ -497,10 +493,9 @@ const QuestionComponent: React.FC = () => {
         const submissionResponse = await axios.post(
           `http://localhost:20000/api/tests/${testId}/submit`,
           {
+            name,
             email,
-            registerNumber,
             phone,
-            dob,
             answers,
             malpractice: isMalpractice,
           }
@@ -513,10 +508,9 @@ const QuestionComponent: React.FC = () => {
         // Save the submission with both questions and answers
         const saveSubmissionPayload = {
           testId,
+          name,
           email,
-          registerNumber,
           phone,
-          dob,
           questions: fullQuestions,
           answers,
           score,
@@ -683,14 +677,12 @@ const QuestionComponent: React.FC = () => {
   useEffect(() => {
     // Load stored input values from sessionStorage
     const storedTestName = sessionStorage.getItem("testName");
-    const storedRegisterNumber = sessionStorage.getItem("registerNumber");
-    const storedDob = sessionStorage.getItem("dob");
+    const storedName = sessionStorage.getItem("name");
     const storedEmail = sessionStorage.getItem("email");
     const storedPhone = sessionStorage.getItem("phone");
 
     if (storedTestName) setTestName(storedTestName);
-    if (storedRegisterNumber) setRegisterNumber(storedRegisterNumber);
-    if (storedDob) setDob(storedDob);
+    if (storedName) setName(storedName);
     if (storedEmail) setEmail(storedEmail);
     if (storedPhone) setPhone(storedPhone);
 
@@ -736,11 +728,10 @@ const QuestionComponent: React.FC = () => {
   // Store input field values in sessionStorage whenever they change
   useEffect(() => {
     sessionStorage.setItem("testName", testName);
-    sessionStorage.setItem("registerNumber", registerNumber);
-    sessionStorage.setItem("dob", dob);
+    sessionStorage.setItem("name", name);
     sessionStorage.setItem("email", email);
     sessionStorage.setItem("phone", phone);
-  }, [testName, registerNumber, dob, email, phone]);
+  }, [testName, name, email, phone]);
 
   // Store selected answers in sessionStorage whenever they change
   useEffect(() => {
@@ -748,11 +739,11 @@ const QuestionComponent: React.FC = () => {
   }, [selectedAnswers]);
 
   // Check if user has already submitted the test
-  const checkTestSubmission = async (email: string, registerNumber: string) => {
+  const checkTestSubmission = async (email: string, name: string) => {
     try {
       const response = await axios.post(
         `http://localhost:20000/api/tests/${testId}/check-submission`,
-        { email, registerNumber }
+        { email, name }
       );
 
       console.log("API response:", response.data);
@@ -814,33 +805,25 @@ const QuestionComponent: React.FC = () => {
     try {
       const response = await axios.post(
         `http://localhost:20000/api/tests/${testId}/authenticate`,
-        { registerNumber, dob, email, phone }
+        { name, email, phone }
       );
 
-      if (response.data.useEmailAuth) {
-        setUseEmailAuth(true);
-      } else {
-        // Store authentication data in session storage
-        sessionStorage.setItem(
-          "authData",
-          JSON.stringify({
-            testId,
-            registerNumber: response.data.registerNumber,
-            email: response.data.email,
-            phone: response.data.phone,
-            dob: response.data.dob,
-          })
-        );
+      // Store authentication data in session storage
+      sessionStorage.setItem(
+        "authData",
+        JSON.stringify({
+          testId,
+          name: response.data.name,
+          email: response.data.email,
+          phone: response.data.phone,
+        })
+      );
 
-        // Call checkTestSubmission to verify test status
-        await checkTestSubmission(
-          response.data.email,
-          response.data.registerNumber
-        );
+      // Call checkTestSubmission to verify test status
+      await checkTestSubmission(response.data.email, response.data.name);
 
-        // Update isAuthenticated state to true
-        setIsAuthenticated(true);
-      }
+      // Update isAuthenticated state to true
+      setIsAuthenticated(true);
     } catch (error: any) {
       handleAuthError(error);
     } finally {
@@ -955,8 +938,7 @@ const QuestionComponent: React.FC = () => {
     sessionStorage.removeItem("isSubmissionSuccessful");
     localStorage.removeItem("isTestSubmitted");
     setTestName("");
-    setRegisterNumber("");
-    setDob("");
+    setName("");
     setEmail("");
     setPhone("");
 
@@ -984,12 +966,43 @@ const QuestionComponent: React.FC = () => {
     sessionStorage.setItem("selectedQuestionIndex", index.toString());
   };
 
+  // Handle sector click and set the sector as active
+  const handleSectorClick = (sector) => {
+    setActiveSector(sector);
+
+    // Find the first question of the selected sector
+    const sectorQuestions = questions.filter(
+      (question) => question.sector === sector
+    );
+
+    // Set the selected question to the first question in the sector
+    if (sectorQuestions.length > 0) {
+      const firstQuestionIndex = questions.findIndex(
+        (q) => q._id === sectorQuestions[0]._id
+      );
+      setSelectedIndexes([firstQuestionIndex]);
+    }
+  };
+
+  // Handle updating the active sector based on the currently selected question
+  const updateActiveSector = (currentQuestionIndex) => {
+    const currentQuestion = questions[currentQuestionIndex];
+    if (currentQuestion) {
+      setActiveSector(currentQuestion.sector);
+    }
+  };
+
   // Handle navigation to the previous question
   const handlePrevious = useCallback(() => {
     if (selectedIndexes[0] > 0) {
       const newIndex = selectedIndexes[0] - 1;
-      setSelectedIndexes([selectedIndexes[0] - 1]);
+
+      // Update the selected question index
+      setSelectedIndexes([newIndex]);
       sessionStorage.setItem("selectedQuestionIndex", newIndex.toString());
+
+      // Dynamically update the active sector based on the selected question
+      updateActiveSector(newIndex);
     }
   }, [selectedIndexes]);
 
@@ -997,10 +1010,22 @@ const QuestionComponent: React.FC = () => {
   const handleNext = useCallback(() => {
     if (selectedIndexes[0] < questions.length - 1) {
       const newIndex = selectedIndexes[0] + 1;
-      setSelectedIndexes([selectedIndexes[0] + 1]);
+
+      // Update the selected question index
+      setSelectedIndexes([newIndex]);
       sessionStorage.setItem("selectedQuestionIndex", newIndex.toString());
+
+      // Dynamically update the active sector based on the selected question
+      updateActiveSector(newIndex);
     }
   }, [selectedIndexes, questions.length]);
+
+  // Effect to handle when selectedIndexes changes (e.g., when switching questions directly)
+  useEffect(() => {
+    if (selectedIndexes.length > 0) {
+      updateActiveSector(selectedIndexes[0]);
+    }
+  }, [selectedIndexes, questions]);
 
   // Handle navigation to the previous question
   // const handlePrevious = useCallback(() => {
@@ -1157,7 +1182,7 @@ const QuestionComponent: React.FC = () => {
     }
   }, []);
 
-  document.addEventListener("contextmenu", (e) => e.preventDefault());
+  // document.addEventListener("contextmenu", (e) => e.preventDefault());
 
   // document.addEventListener("keydown", function (e) {
   //   // Disable F12
@@ -1176,8 +1201,8 @@ const QuestionComponent: React.FC = () => {
 
   const splitText = (text) => {
     const patterns = [
-      { regex: /`\*{([^%]+)}\*`/g, type: "code" },
-      { regex: /\*\*([^*]+)\*\*/g, type: "bold" },
+      { regex: /`\*{([^%]+)}\*`/g, type: "code" }, // regex for code with "*{}*"
+      { regex: /\*\*([^*]+)\*\*/g, type: "bold" }, // regex for bold "**text**"
     ];
 
     const parts = [];
@@ -1194,8 +1219,25 @@ const QuestionComponent: React.FC = () => {
           });
         }
 
-        // Push the matched part based on its type (e.g., bold)
-        parts.push({ type, content: match[1] });
+        // If the part is code, remove empty lines at the beginning and end
+        if (type === "code") {
+          const trimmedCode = match[1]
+            .split("\n")
+            .filter((line, index, array) => {
+              // Keep non-empty lines or lines that are between non-empty ones
+              return (
+                !(index === 0 && line.trim() === "") &&
+                !(index === array.length - 1 && line.trim() === "")
+              );
+            })
+            .join("\n");
+
+          // Push the cleaned code block
+          parts.push({ type, content: trimmedCode });
+        } else {
+          // Push the matched part based on its type (e.g., bold)
+          parts.push({ type, content: match[1] });
+        }
 
         lastIndex = regex.lastIndex;
       }
@@ -1338,21 +1380,6 @@ const QuestionComponent: React.FC = () => {
     );
   }
 
-  const handleSectorClick = (sector) => {
-    setActiveSector(sector);
-
-    // Find the first question of the selected sector
-    const sectorQuestions = questions.filter(
-      (question) => question.sector === sector
-    );
-    if (sectorQuestions.length > 0) {
-      const firstQuestionIndex = questions.findIndex(
-        (q) => q._id === sectorQuestions[0]._id
-      );
-      setSelectedIndexes([firstQuestionIndex]);
-    }
-  };
-
   if (loading) {
     return (
       <div className="w-full h-screen flex justify-center items-center">
@@ -1478,92 +1505,40 @@ const QuestionComponent: React.FC = () => {
                       onSubmit={handleAuthentication}
                       className="flex w-[430px] mx-auto flex-col items-center mt-8 gap-3 justify-between"
                     >
-                      {!useEmailAuth ? (
-                        <>
-                          <h1 className="poppins text-[14px] -mt-6 mb-6 text-[#818181]">
-                            Enter you email and mobile number to start the test
-                          </h1>
-                          <Input
-                            allowClear
-                            type="text"
-                            placeholder="Enter your email"
-                            className="w-full h-12 text-[15px] font-medium rounded-lg border-none focus:outline-none"
-                            style={{
-                              backgroundColor: "#e2e8f0",
-                              border: "none",
-                              boxShadow: "none",
-                            }}
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                          />
-                          <Input
-                            allowClear
-                            type="text"
-                            placeholder="Enter your number"
-                            className="w-full h-12 text-[15px] font-medium rounded-lg border-none focus:outline-none"
-                            style={{
-                              backgroundColor: "#e2e8f0",
-                              border: "none",
-                              boxShadow: "none",
-                            }}
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            required
-                          />
-                        </>
-                      ) : (
-                        <>
-                          <h1 className="poppins text-[14px] -mt-6 mb-6 text-[#818181]">
-                            Enter you register number and DOB to start the test
-                          </h1>
-                          <Input
-                            allowClear
-                            type="text"
-                            placeholder="Register number"
-                            className="w-full h-12 text-[15px] font-medium rounded-lg border-none focus:outline-none"
-                            style={{
-                              backgroundColor: "#e2e8f0",
-                              border: "none",
-                              boxShadow: "none",
-                            }}
-                            value={registerNumber}
-                            onChange={(e) => setRegisterNumber(e.target.value)}
-                            required
-                          />
-                          <Input
-                            allowClear
-                            type="text"
-                            placeholder="Date of birth"
-                            className="w-full h-12 text-[15px] font-medium rounded-lg border-none focus:outline-none"
-                            style={{
-                              backgroundColor: "#e2e8f0",
-                              border: "none",
-                              boxShadow: "none",
-                            }}
-                            value={dob}
-                            onChange={(e) => setDob(e.target.value)}
-                            required
-                          />
-                        </>
-                      )}
+                      <>
+                        <h1 className="poppins text-[14px] -mt-6 mb-6 text-[#818181]">
+                          Enter you email and mobile number to start the test
+                        </h1>
+                        <Input
+                          allowClear
+                          type="text"
+                          placeholder="Email Id"
+                          className="w-full h-12 text-[15px] font-medium rounded-lg border-none focus:outline-none"
+                          style={{
+                            backgroundColor: "#e2e8f0",
+                            border: "none",
+                            boxShadow: "none",
+                          }}
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required
+                        />
+                        <Input
+                          allowClear
+                          type="text"
+                          placeholder="Mobile number"
+                          className="w-full h-12 text-[15px] font-medium rounded-lg border-none focus:outline-none"
+                          style={{
+                            backgroundColor: "#e2e8f0",
+                            border: "none",
+                            boxShadow: "none",
+                          }}
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          required
+                        />
+                      </>
 
-                      <button
-                        type="button"
-                        className="font-semibold w-full flex items-center text-[#216578] p-3 rounded-lg gap-1"
-                        onClick={() => setUseEmailAuth(!useEmailAuth)}
-                      >
-                        <p className="flex justify-start text-[13px] gap-2">
-                          {" "}
-                          Don't have{" "}
-                          {useEmailAuth ? "register number?" : "email?"}
-                          <span className="text-[#98a0a1]">
-                            {useEmailAuth
-                              ? "Use Email Id"
-                              : "Use Register number"}
-                          </span>
-                        </p>
-                      </button>
                       <button
                         type="submit"
                         className="mt-1 font-semibold w-full text-[#ffffff] bg-[#083344] hover:bg-[#184856] hover:shadow-lg transition ease-in-out duration-300 p-3 rounded-lg gap-1"
@@ -1723,7 +1698,7 @@ const QuestionComponent: React.FC = () => {
                                 ) : null
                               )}
                             </div>
-                            {questions.map((question, index) =>
+                            {/* {questions.map((question, index) =>
                               selectedIndexes.includes(index) ? (
                                 <div className="">
                                   {question.required && (
@@ -1733,7 +1708,7 @@ const QuestionComponent: React.FC = () => {
                                   )}
                                 </div>
                               ) : null
-                            )}
+                            )} */}
                             <div
                               className="cursor-pointer"
                               onClick={handleBookmarkClick}
@@ -1758,10 +1733,10 @@ const QuestionComponent: React.FC = () => {
                             {questions.map((question, index) =>
                               selectedIndexes.includes(index) ? (
                                 <div
-                                  className="h-[46vh] overflow-y-scroll"
+                                  className="h-[46vh] flex flex-col justify-between overflow-y-scroll"
                                   key={question._id}
                                 >
-                                  <div className="mt-4 flex">
+                                  <div className="mt-4 h-auto">
                                     {splitText(question.questionText).map(
                                       (part, index) => {
                                         // Handle code part rendering
@@ -1825,14 +1800,13 @@ const QuestionComponent: React.FC = () => {
                                           });
                                       }
                                     )}
+
+                                    <div className="h-[1px] mt-2 w-full opacity-20 bg-cyan-800 rounded-lg"></div>
                                   </div>
-
-                                  <div className="h-[1px] mt-2 w-full opacity-20 bg-cyan-800 rounded-lg"></div>
-
                                   <FormControl
                                     component="fieldset"
                                     style={{ margin: "20px 0" }}
-                                    className="w-full"
+                                    className="w-full h-full"
                                   >
                                     {/* Text Input */}
                                     {question.inputType === "Text Input" && (
@@ -1848,7 +1822,7 @@ const QuestionComponent: React.FC = () => {
                                           selectedAnswers[question._id]?.[0] ||
                                           ""
                                         }
-                                        className="w-full h-[40vh] focus:outline-none resize-none"
+                                        className="w-full min-h-full focus:outline-none resize-none"
                                       />
                                     )}
 

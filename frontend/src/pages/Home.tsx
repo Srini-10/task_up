@@ -38,7 +38,7 @@ interface Question {
 
 interface Candidate {
   _id: string;
-  registerNumber: string;
+  name: string;
   profilePicture?: string;
   email: string;
   dob?: string;
@@ -98,19 +98,19 @@ const Home = () => {
     editingQuestion?.required || false
   );
 
-  useEffect(() => {
-    // Fetch available sector options when the component loads
-    const fetchSectorOptions = async () => {
-      try {
-        const response = await axios.get("http://localhost:20000/api/tests");
-        setSectorOptions(response.data);
-      } catch (error) {
-        console.error("Error fetching sector options:", error);
-      }
-    };
+  // useEffect(() => {
+  //   // Fetch available sector options when the component loads
+  //   const fetchSectorOptions = async () => {
+  //     try {
+  //       const response = await axios.get("http://localhost:20000/api/tests");
+  //       setSectorOptions(response.data);
+  //     } catch (error) {
+  //       console.error("Error fetching sector options:", error);
+  //     }
+  //   };
 
-    fetchSectorOptions();
-  }, []);
+  //   fetchSectorOptions();
+  // }, []);
 
   const handleSectorChange = (newSector) => {
     // Update the state to reflect the new sector value
@@ -203,55 +203,6 @@ const Home = () => {
     }
   }, []);
 
-  useEffect(() => {
-    // const storedCandidates = JSON.parse(
-    //   localStorage.getItem("candidates") as string
-    // );
-    const storedSelectedCandidates = JSON.parse(
-      localStorage.getItem("selectedCandidates") as string
-    );
-
-    // If there are candidates stored in localStorage, set them
-    // if (storedCandidates && storedCandidates.length > 0) {
-    //   setCandidates(storedCandidates);
-    // } else {
-    // Fetch candidates from API if not in localStorage
-    const fetchCandidates = async () => {
-      try {
-        const response = await fetch(
-          "http://localhost:20000/api/testCandidates"
-        );
-        const data = await response.json();
-        console.log(data);
-
-        // Update profilePicture URLs
-        const updatedCandidates = data.map((candidate: any) => {
-          if (candidate.profilePicture) {
-            return {
-              ...candidate,
-              profilePicture: `http://localhost:20000/uploads/${candidate.profilePicture}`,
-            };
-          }
-          return candidate;
-        });
-
-        setCandidates(updatedCandidates);
-        // localStorage.setItem("candidates", JSON.stringify(updatedCandidates)); // Store candidates in localStorage
-      } catch (error) {
-        console.error("Error fetching candidates:", error);
-      }
-    };
-
-    fetchCandidates();
-    // }
-
-    // If selected candidates are stored, set them
-    if (storedSelectedCandidates) {
-      setSelectedCandidates(storedSelectedCandidates);
-    }
-  }, []);
-
-  // Store candidates and selectedCandidates in localStorage on change
   const handleCreateTest = async (event) => {
     event.preventDefault();
     setLoading(true);
@@ -275,7 +226,7 @@ const Home = () => {
     const selectedCandidateData = candidates
       .filter((candidate: any) => selectedCandidates.includes(candidate._id))
       .map((candidate: any) => ({
-        registerNumber: candidate.registerNumber || "",
+        name: candidate.name || "",
         dob: candidate.dob || "",
         email: candidate.email || "",
         phone: candidate.phone || "",
@@ -370,14 +321,28 @@ const Home = () => {
     );
   };
 
+  // Update localStorage/sessionStorage when selectedCandidates changes
+  useEffect(() => {
+    sessionStorage.setItem(
+      "selectedCandidates",
+      JSON.stringify(selectedCandidates)
+    );
+  }, [selectedCandidates]);
+
+  // Handle select all logic
   const handleSelectAll = () => {
     if (selectAll) {
+      // Deselect all candidates
       setSelectedCandidates([]);
     } else {
-      setSelectedCandidates(
-        filteredCandidates.map((candidate: any) => candidate._id)
-      ); // Select all
+      // Select all filtered candidates
+      const allCandidateIds = filteredCandidates.map(
+        (candidate: Candidate) => candidate._id
+      );
+      setSelectedCandidates(allCandidateIds);
     }
+
+    // Toggle selectAll state
     setSelectAll(!selectAll);
   };
 
@@ -531,7 +496,7 @@ const Home = () => {
       return (
         candidate.email.toLowerCase().includes(query) ||
         candidate.phone.includes(query) ||
-        candidate.registerNumber.includes(query) ||
+        candidate.name.includes(query) ||
         candidate.dob.includes(query)
       );
     }
@@ -747,7 +712,7 @@ const Home = () => {
                             {candidate.profilePicture ? (
                               <img
                                 src={candidate.profilePicture}
-                                alt={`${candidate.registerNumber}'s profile`}
+                                alt={`${candidate.name}'s profile`}
                                 className="w-10 h-10 bg-slate-400 p-2.5 rounded-lg mr-4"
                               />
                             ) : (
@@ -756,12 +721,12 @@ const Home = () => {
                               </div>
                             )}
                             <div className="flex flex-col justify-between items-start flex-grow">
-                              <text className="poppins2 text-[15px] text-black">{`${candidate.registerNumber} - ${candidate.email}`}</text>
-                              <text className="montserrat text-[14px] text-gray-500">
-                                {`${candidate.dob || "DOB not available"} - ${
-                                  candidate.phone || "Phone not available"
-                                }`}
-                              </text>
+                              <text className="poppins2 text-[15px] text-black">{`${candidate.name}`}</text>
+                              <text className="montserrat text-[14px] text-gray-500">{`${
+                                candidate.email || "Email not available"
+                              } - ${
+                                candidate.phone || "Phone not available"
+                              }`}</text>
                             </div>
                             {selectedCandidates.includes(candidate._id) && (
                               <Button

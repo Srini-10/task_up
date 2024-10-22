@@ -26,8 +26,7 @@ const { Dragger } = Upload;
 
 type Candidate = {
   _id: string;
-  registerNumber: string;
-  dob: string;
+  name: string;
   email: string;
   phone: string;
   profilePicture: string;
@@ -50,9 +49,8 @@ export default function CreateCandidates() {
   const storedRowsPerPage = localStorage.getItem("rowsPerPage");
 
   const [columns, setColumns] = useState([
+    { id: "name", label: "Name" },
     { id: "email", label: "Email" },
-    { id: "registerNumber", label: "Register Number" },
-    { id: "dob", label: "Date of Birth" },
     { id: "phone", label: "Phone" },
   ]);
 
@@ -65,16 +63,14 @@ export default function CreateCandidates() {
   const [isEditVisible, setEditVisible] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate>({
     _id: "",
-    registerNumber: "",
-    dob: "",
+    name: "",
     email: "",
     phone: "",
     profilePicture: "",
   });
   const [newCandidate, setNewCandidate] = useState<Candidate>({
     _id: "",
-    registerNumber: "",
-    dob: "",
+    name: "",
     email: "",
     phone: "",
     profilePicture: "",
@@ -120,7 +116,7 @@ export default function CreateCandidates() {
             // Construct the image URL assuming the backend serves images from /uploads folder
             const profilePictureURL = `http://localhost:20000/uploads/${candidate.profilePicture}`;
             console.log(
-              `Candidate ${candidate.registerNumber} Profile Picture:`,
+              `Candidate ${candidate.name} Profile Picture:`,
               profilePictureURL
             );
 
@@ -228,8 +224,7 @@ export default function CreateCandidates() {
         // Clear the form fields after saving
         setNewCandidate({
           _id: "",
-          registerNumber: "",
-          dob: "",
+          name: "",
           email: "",
           phone: "",
           profilePicture: "",
@@ -245,20 +240,20 @@ export default function CreateCandidates() {
     setProfilePictureFile(null);
   };
 
-  const convertExcelDateToISO = (excelDate) => {
-    // Adjust for Excel's 1900-based system and handle leap year bug
-    const daysSinceBase = excelDate - 25569; // Excel's base date starts at 1900-01-01
+  // const convertExcelDateToISO = (excelDate) => {
+  //   // Adjust for Excel's 1900-based system and handle leap year bug
+  //   const daysSinceBase = excelDate - 25569; // Excel's base date starts at 1900-01-01
 
-    // Convert to JavaScript's time (milliseconds since 1970-01-01)
-    const date = new Date(daysSinceBase * 86400 * 1000); // 86400 seconds in a day
+  //   // Convert to JavaScript's time (milliseconds since 1970-01-01)
+  //   const date = new Date(daysSinceBase * 86400 * 1000); // 86400 seconds in a day
 
-    // Format the date as "DD/MM/YYYY"
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-based
-    const year = date.getFullYear();
+  //   // Format the date as "DD/MM/YYYY"
+  //   const day = String(date.getDate()).padStart(2, "0");
+  //   const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-based
+  //   const year = date.getFullYear();
 
-    return `${day}/${month}/${year}`;
-  };
+  //   return `${day}/${month}/${year}`;
+  // };
 
   const handleFileUpload = async (file) => {
     const reader = new FileReader();
@@ -273,22 +268,18 @@ export default function CreateCandidates() {
       // Parse the sheet into JSON format
       let candidateData = XLSX.utils.sheet_to_json(ws);
 
-      // Convert the dob and phone to correct formats
-      // Convert the dob, phone, and convert email and registerNumber to lowercase
+      // Convert the phone, and convert email and name to lowercase
       candidateData = candidateData.map((row) => ({
         ...row,
-        dob: row.dob ? convertExcelDateToISO(row.dob) : null, // Convert dob if it exists
-        phone: row.phone ? row.phone.toString().toLowerCase() : "", // Ensure phone is a string and lowercase
-        email: row.email ? row.email.toLowerCase() : "", // Convert email to lowercase
-        registerNumber: row.registerNumber
-          ? row.registerNumber.toUpperCase()
-          : "", // Convert registerNumber to lowercase
+        name: row.name ? row.name.toUpperCase() : "",
+        email: row.email ? row.email.toLowerCase() : "",
+        phone: row.phone ? row.phone.toString().toLowerCase() : "",
       }));
 
       console.log(candidateData); // Check the parsed data
 
       // Validate if data contains the required columns
-      const requiredColumns = ["email", "registerNumber", "dob", "phone"];
+      const requiredColumns = ["name", "email", "phone"];
       const isValid = candidateData.every((row) =>
         requiredColumns.every(
           (col) => row[col] && row[col].toString().trim() !== ""
@@ -299,7 +290,7 @@ export default function CreateCandidates() {
         await importCandidatesToDB(candidateData); // Send to backend API
       } else {
         alert(
-          "Invalid file format. Ensure there are 4 columns: registerNumber, dob, email, phone."
+          "Invalid file format. Ensure there are 3 columns: name, email, phone."
         );
       }
     };
@@ -361,8 +352,7 @@ export default function CreateCandidates() {
     try {
       // Prepare the form data to include candidate details and profile picture
       const formData = new FormData();
-      formData.append("registerNumber", selectedCandidate.registerNumber);
-      formData.append("dob", selectedCandidate.dob);
+      formData.append("name", selectedCandidate.name);
       formData.append("email", selectedCandidate.email);
       formData.append("phone", selectedCandidate.phone);
 
@@ -417,10 +407,7 @@ export default function CreateCandidates() {
     if (filterValue) {
       filteredCandidates = filteredCandidates.filter(
         (candidate) =>
-          candidate.registerNumber
-            .toLowerCase()
-            .includes(filterValue.toLowerCase()) ||
-          candidate.dob.toLowerCase().includes(filterValue.toLowerCase()) ||
+          candidate.name.toLowerCase().includes(filterValue.toLowerCase()) ||
           candidate.email.toLowerCase().includes(filterValue.toLowerCase()) ||
           candidate.phone.toLowerCase().includes(filterValue.toLowerCase())
       );
@@ -459,13 +446,13 @@ export default function CreateCandidates() {
   );
 
   // Function to handle individual row selection
-  const handleSelectRow = (registerNumber) => {
-    if (selectedRows.includes(registerNumber)) {
+  const handleSelectRow = (name) => {
+    if (selectedRows.includes(name)) {
       // Deselect if already selected
-      setSelectedRows(selectedRows.filter((row) => row !== registerNumber));
+      setSelectedRows(selectedRows.filter((row) => row !== name));
     } else {
       // Add the row to the selected ones
-      setSelectedRows([...selectedRows, registerNumber]);
+      setSelectedRows([...selectedRows, name]);
     }
   };
 
@@ -481,19 +468,19 @@ export default function CreateCandidates() {
       setSelectedRows([]);
     } else {
       // Select all rows on the current page
-      const allRegisterNumbers = items.map((item) => item.registerNumber);
-      setSelectedRows(allRegisterNumbers);
+      const allNames = items.map((item) => item.name);
+      setSelectedRows(allNames);
     }
   };
 
   // Function to handle "Delete Selected" candidates
   const handleDeleteSelected = async () => {
     // Loop over selected rows and delete each candidate from the server
-    for (const registerNumber of selectedRows) {
+    for (const name of selectedRows) {
       try {
         // Find the candidate to delete
         const candidateToDelete = candidates.find(
-          (candidate) => candidate.registerNumber === registerNumber
+          (candidate) => candidate.name === name
         );
 
         if (candidateToDelete) {
@@ -505,9 +492,7 @@ export default function CreateCandidates() {
           );
 
           if (response.ok) {
-            console.log(
-              `Candidate with Register Number ${registerNumber} deleted successfully`
-            );
+            console.log(`Candidate with Name ${name} deleted successfully`);
           } else {
             const errorData = await response.text();
             console.error("Error deleting candidate:", errorData);
@@ -520,7 +505,7 @@ export default function CreateCandidates() {
 
     // Filter out the deleted rows from the `candidates` state
     const remainingCandidates = candidates.filter(
-      (candidate) => !selectedRows.includes(candidate.registerNumber)
+      (candidate) => !selectedRows.includes(candidate.name)
     );
     setCandidates(remainingCandidates); // Update the candidates state
     setSelectedRows([]); // Clear selected rows after deletion
@@ -696,14 +681,14 @@ export default function CreateCandidates() {
         <TableBody>
           {items.map((candidate, index) => (
             <TableRow
-              key={candidate.registerNumber}
+              key={candidate.name}
               className="hover:bg-neutral-100 transition-colors duration-100"
             >
               <TableCell>
                 <Checkbox
                   color="default"
-                  isSelected={selectedRows.includes(candidate.registerNumber)}
-                  onChange={() => handleSelectRow(candidate.registerNumber)}
+                  isSelected={selectedRows.includes(candidate.name)}
+                  onChange={() => handleSelectRow(candidate.name)}
                 />
               </TableCell>
               <TableCell>{index + 1}</TableCell>
@@ -747,29 +732,21 @@ export default function CreateCandidates() {
 
           <Input
             className="h-12"
-            label="Email"
-            value={newCandidate.email}
-            onChange={(e) =>
-              setNewCandidate({ ...newCandidate, email: e.target.value })
-            }
-          />
-          <Input
-            className="h-12"
-            label="Register Number"
-            value={newCandidate.registerNumber}
+            label="Name"
+            value={newCandidate.name}
             onChange={(e) =>
               setNewCandidate({
                 ...newCandidate,
-                registerNumber: e.target.value,
+                name: e.target.value,
               })
             }
           />
           <Input
             className="h-12"
-            label="Date of Birth"
-            value={newCandidate.dob}
+            label="Email"
+            value={newCandidate.email}
             onChange={(e) =>
-              setNewCandidate({ ...newCandidate, dob: e.target.value })
+              setNewCandidate({ ...newCandidate, email: e.target.value })
             }
           />
           <Input
@@ -800,32 +777,22 @@ export default function CreateCandidates() {
             <h1 className="poppins2 text-[25px]">Edit Candidate</h1>
 
             <Input
+              label="Name"
+              value={selectedCandidate.name}
+              onChange={(e) =>
+                setSelectedCandidate({
+                  ...selectedCandidate,
+                  name: e.target.value,
+                })
+              }
+            />
+            <Input
               label="Email"
               value={selectedCandidate.email}
               onChange={(e) =>
                 setSelectedCandidate({
                   ...selectedCandidate,
                   email: e.target.value,
-                })
-              }
-            />
-            <Input
-              label="Register Number"
-              value={selectedCandidate.registerNumber}
-              onChange={(e) =>
-                setSelectedCandidate({
-                  ...selectedCandidate,
-                  registerNumber: e.target.value,
-                })
-              }
-            />
-            <Input
-              label="Date of Birth"
-              value={selectedCandidate.dob}
-              onChange={(e) =>
-                setSelectedCandidate({
-                  ...selectedCandidate,
-                  dob: e.target.value,
                 })
               }
             />

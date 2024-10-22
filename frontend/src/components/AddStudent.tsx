@@ -2,13 +2,13 @@ import React, { useState } from "react";
 import { TextField, Button, Box } from "@mui/material";
 
 const AddStudent = ({ students, setStudents }) => {
-  const [registerNumber, setRegisterNumber] = useState("");
+  const [name, setname] = useState("");
   const [dob, setDob] = useState("");
 
   const handleAddStudent = () => {
-    const newStudent = { registerNumber, dob };
+    const newStudent = { name, dob };
     setStudents([...students, newStudent]);
-    setRegisterNumber("");
+    setname("");
     setDob("");
   };
 
@@ -16,8 +16,8 @@ const AddStudent = ({ students, setStudents }) => {
     <Box mt={3}>
       <TextField
         label="Student Register Number"
-        value={registerNumber}
-        onChange={(e) => setRegisterNumber(e.target.value)}
+        value={name}
+        onChange={(e) => setname(e.target.value)}
         fullWidth
         margin="normal"
       />

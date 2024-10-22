@@ -6,7 +6,7 @@ const MalpracticeSchema = new mongoose.Schema({
     ref: "Test",
     required: true,
   },
-  registerNumber: {
+  name: {
     type: String,
     required: true,
   },

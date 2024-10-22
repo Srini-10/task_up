@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const testSubmissionSchema = new mongoose.Schema({
   testId: { type: mongoose.Schema.Types.ObjectId, ref: "Test", required: true },
-  registerNumber: { type: String, required: true },
+  name: { type: String, required: true },
   type: Map,
   of: mongoose.Schema.Types.Mixed,
   email: { type: String, required: true },

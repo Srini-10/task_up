@@ -25,7 +25,7 @@ const { TextArea } = Input;
 type Candidate = {
   profilePicture?: any;
   _id: never;
-  registerNumber: string;
+  name: string;
   dob: string;
   phone: string;
   email: string;
@@ -55,7 +55,7 @@ const EditTest = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [authOption, setAuthOption] = useState("candidateInfo");
-  const [selectedCandidates, setSelectedCandidates] = useState([]);
+  const [updatedCandidates, setUpdatedCandidates] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [password, setPassword] = useState("");
@@ -113,38 +113,73 @@ const EditTest = () => {
     }
   }, []);
 
-  const fetchCandidates = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get(
-        "http://localhost:20000/api/testCandidates"
-      );
-      setCandidates(response.data);
-      console.log(response.data);
-      // localStorage.setItem("candidates", JSON.stringify(response.data));
-    } catch (error) {
-      console.error("Error fetching candidates:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Fetch candidates on component mount and persist the selected ones
   useEffect(() => {
-    // const storedCandidates = JSON.parse(localStorage.getItem("candidates")!);
-    const storedSelectedCandidates = JSON.parse(
-      localStorage.getItem("selectedCandidates")!
-    );
+    const fetchCandidates = async () => {
+      setLoading(true);
+      try {
+        const response = await axios.get(
+          "http://localhost:20000/api/testCandidates"
+        );
+        const fetchedCandidates = response.data;
 
-    // if (storedCandidates && storedCandidates.length > 0) {
-    //   setCandidates(storedCandidates);
-    // } else {
+        // Load previously selected candidates from sessionStorage
+        const storedUpdatedCandidates =
+          JSON.parse(sessionStorage.getItem("updatedCandidates")) || [];
+
+        // Ensure selected candidates only include valid ones from the current fetched candidates
+        const validSelectedCandidates = storedUpdatedCandidates.filter((id) =>
+          fetchedCandidates.some((candidate) => candidate._id === id)
+        );
+
+        // Update state with fetched candidates and valid selected candidates
+        setCandidates(fetchedCandidates);
+        setUpdatedCandidates(validSelectedCandidates);
+
+        // Store the valid selected candidates back in sessionStorage
+        sessionStorage.setItem(
+          "updatedCandidates",
+          JSON.stringify(validSelectedCandidates)
+        );
+      } catch (error) {
+        console.error("Error fetching candidates:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchCandidates();
-    // }
-
-    if (storedSelectedCandidates) {
-      setSelectedCandidates(storedSelectedCandidates);
-    }
   }, []);
+
+  // Persist the selected candidates from sessionStorage when the component mounts
+  // useEffect(() => {
+  //   const savedSelectedCandidates = sessionStorage.getItem("updatedCandidates");
+  //   if (savedSelectedCandidates) {
+  //     setUpdatedCandidates(JSON.parse(savedSelectedCandidates));
+  //   }
+  // }, []);
+
+  const handleCandidateSelect = (candidateId) => {
+    setUpdatedCandidates((prevSelected) => {
+      let updatedSelected;
+
+      // If the candidate is already selected, deselect it
+      if (prevSelected.includes(candidateId)) {
+        updatedSelected = prevSelected.filter((id) => id !== candidateId);
+      } else {
+        // Otherwise, add the candidate to the selected list
+        updatedSelected = [...prevSelected, candidateId];
+      }
+
+      // Store the updated selected candidates in sessionStorage
+      sessionStorage.setItem(
+        "updatedCandidates",
+        JSON.stringify(updatedSelected)
+      );
+
+      return updatedSelected;
+    });
+  };
 
   useEffect(() => {
     // Store the selected auth option in session storage whenever it changes
@@ -250,23 +285,16 @@ const EditTest = () => {
     setModalVisible(false);
   };
 
-  // Save candidates to local storage whenever candidates state is updated
-  useEffect(() => {
-    if (candidates.length > 0) {
-      sessionStorage.setItem("candidates", JSON.stringify(candidates));
-    }
-  }, [candidates]);
-
   const handleEditTest = async () => {
     if (isButtonDisabled) {
       alert("Please wait, questions are still being fetched.");
     } else {
       const selectedCandidateData = candidates
         .filter((candidate: Candidate) =>
-          selectedCandidates.includes(candidate._id)
+          updatedCandidates.includes(candidate._id)
         )
         .map((candidate: Candidate) => ({
-          registerNumber: candidate.registerNumber,
+          name: candidate.name,
           dob: candidate.dob,
           phone: candidate.phone,
           email: candidate.email,
@@ -338,12 +366,12 @@ const EditTest = () => {
     setPassword("");
     setQuestions([]);
     setCandidates([]);
-    setSelectedCandidates([]);
+    setUpdatedCandidates([]);
     setShowDetails(false);
     sessionStorage.removeItem(`test-questions-${testId}`);
     localStorage.removeItem("candidates");
     localStorage.removeItem("questions");
-    localStorage.removeItem("selectedCandidates");
+    localStorage.removeItem("updatedCandidates");
   };
 
   const handleStartDateChange = (e) => {
@@ -463,37 +491,6 @@ const EditTest = () => {
     handleDeleteQuestion(question.originalIndex); // Make sure originalIndex is correct
   };
 
-  // Load selected candidates from sessionStorage when the component mounts (optional)
-  useEffect(() => {
-    const savedSelectedCandidates =
-      sessionStorage.getItem("selectedCandidates");
-    if (savedSelectedCandidates) {
-      setSelectedCandidates(JSON.parse(savedSelectedCandidates));
-    }
-  }, []);
-
-  const handleCandidateSelect = (candidateId) => {
-    setSelectedCandidates((prevSelected) => {
-      let updatedSelected;
-      //@ts-ignore
-      if (prevSelected.includes(candidateId)) {
-        // If already selected, remove it
-        updatedSelected = prevSelected.filter((id) => id !== candidateId);
-      } else {
-        // Otherwise, add it
-        updatedSelected = [...prevSelected, candidateId];
-      }
-
-      // Save the updated selected candidates to sessionStorage
-      sessionStorage.setItem(
-        "selectedCandidates",
-        JSON.stringify(updatedSelected)
-      );
-
-      return updatedSelected;
-    });
-  };
-
   type EditingQuestion = {
     options: string[]; // Ensure options is always a string array
     questionText?: string;
@@ -557,12 +554,24 @@ const EditTest = () => {
 
   const handleSelectAll = () => {
     if (selectAll) {
-      setSelectedCandidates([]);
+      // Deselect all candidates
+      setUpdatedCandidates([]);
+      // Clear sessionStorage since no candidates are selected
+      sessionStorage.setItem("updatedCandidates", JSON.stringify([]));
     } else {
-      setSelectedCandidates(
-        filteredCandidates.map((candidate: Candidate) => candidate._id)
+      // Select all filtered candidates
+      const allCandidateIds = filteredCandidates.map(
+        (candidate: Candidate) => candidate._id
+      );
+      setUpdatedCandidates(allCandidateIds);
+      // Update sessionStorage with all selected candidate IDs
+      sessionStorage.setItem(
+        "updatedCandidates",
+        JSON.stringify(allCandidateIds)
       );
     }
+
+    // Toggle selectAll state
     setSelectAll(!selectAll);
   };
 
@@ -571,7 +580,7 @@ const EditTest = () => {
     return (
       candidate.email.toLowerCase().includes(query) ||
       candidate.phone.includes(query) ||
-      candidate.registerNumber.includes(query) ||
+      candidate.name.includes(query) ||
       (candidate.dob && candidate.dob.includes(query))
     );
   });
@@ -602,7 +611,7 @@ const EditTest = () => {
           handleCorrectAnswerSelect={handleCorrectAnswerSelect}
           setIsEditModalOpen={setIsEditModalOpen}
         />
-        <div className="min-w-[450px] bg-[#a5c4ca] rounded-lg p-4">
+        <div className="max-w-[450px] min-w-[450px] overflow-y-scroll h-[calc(100vh-90px)] bg-[#a5c4ca] rounded-lg p-4">
           <h1 className="poppins2 text-[25px] text-[#083344]">Edit Test</h1>
           <Input
             required
@@ -690,7 +699,7 @@ const EditTest = () => {
                     borderRadius: "8px",
                   }}
                 >
-                  <div className="">
+                  <div>
                     <div className="flex justify-between items-start">
                       <h2
                         id="select-students-modal-title"
@@ -769,41 +778,37 @@ const EditTest = () => {
                           <ListItem key={candidate._id} className="items-start">
                             <div
                               className={`w-full flex justify-start items-center -my-[6.5px] h-16 rounded-lg p-6 border-b-[1.5px] hover:bg-[#e7ebec] border-gray-200 cursor-pointer ${
-                                selectedCandidates.includes(candidate._id)
+                                updatedCandidates.includes(candidate._id)
                                   ? "bg-[#d9e5e7]"
                                   : ""
                               }`}
                               onClick={() =>
                                 handleCandidateSelect(candidate._id)
-                              } // Handle selection on click
+                              }
                             >
                               <Checkbox
-                                checked={selectedCandidates.includes(
+                                checked={updatedCandidates.includes(
                                   candidate._id
                                 )}
                                 onChange={() =>
                                   handleCandidateSelect(candidate._id)
                                 }
-                                style={{ display: "none" }} // Hide the checkbox
+                                style={{ display: "none" }}
                               />
                               <img
-                                src={
-                                  candidate.profilePicture
-                                    ? candidate.profilePicture
-                                    : DefaultProfile
-                                }
-                                alt={`${candidate.registerNumber}'s profile`}
+                                src={candidate.profilePicture || DefaultProfile}
+                                alt={`${candidate.name}'s profile`}
                                 className="w-10 h-10 bg-slate-400 p-2.5 rounded-lg mr-4"
                               />
                               <div className="flex flex-col justify-between items-start flex-grow">
-                                <text className="poppins2 text-[15px] text-black">{`${candidate.registerNumber} - ${candidate.email}`}</text>
-                                <text className="montserrat text-[14px] text-gray-500">
-                                  {`${candidate.dob || "DOB not available"} - ${
-                                    candidate.phone || "Phone not available"
-                                  }`}
-                                </text>
+                                <text className="poppins2 text-[15px] text-black">{`${candidate.name}`}</text>
+                                <text className="montserrat text-[14px] text-gray-500">{`${
+                                  candidate.email || "Email not available"
+                                } - ${
+                                  candidate.phone || "Phone not available"
+                                }`}</text>
                               </div>
-                              {selectedCandidates.includes(candidate._id) && ( // Conditionally render the button
+                              {updatedCandidates.includes(candidate._id) && (
                                 <Button
                                   component="a"
                                   href="#"
@@ -812,11 +817,11 @@ const EditTest = () => {
                                     backgroundColor: "#083344",
                                     borderColor: "#083344",
                                     color: "white",
-                                    marginLeft: "auto", // Align button to the right
+                                    marginLeft: "auto",
                                   }}
                                   onClick={(e) => {
-                                    e.stopPropagation(); // Prevent click from triggering the list item click
-                                    handleCandidateSelect(candidate._id); // Handle check action
+                                    e.stopPropagation();
+                                    handleCandidateSelect(candidate._id);
                                   }}
                                 >
                                   ✔
