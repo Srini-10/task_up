@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { evaluate } from "mathjs"; // Importing evaluate function from math.js
 import "./Calculator.css"; // Import styles for the calculator
+import { Button } from "@nextui-org/button";
 
-const Calculator = () => {
+const Calculator = ({ onClose }) => {
   const [input, setInput] = useState("");
   const [result, setResult] = useState("");
   const [isScientific, setIsScientific] = useState(false);
@@ -67,6 +68,14 @@ const Calculator = () => {
 
   return (
     <div className="calculator-container">
+      <div className="w-full flex mb-2 justify-end">
+        <button
+          className="w-4 h-4 -mt-1 -mr-1 rounded-full flex text-[13px] items-center justify-center border-1 border-[#778f9e] bg-neutral-300 hover:bg-neutral-400"
+          onClick={onClose}
+        >
+          <p className="-mt-0.5">×</p>
+        </button>
+      </div>
       <div className="calculator-display">
         <div className="input-display">{input || "0"}</div>
         <div className="result-display">{result}</div>

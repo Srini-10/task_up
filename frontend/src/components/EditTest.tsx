@@ -118,47 +118,92 @@ const EditTest = () => {
     const fetchCandidates = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(
+        // Fetch candidates from the database
+        const candidatesResponse = await axios.get(
           "http://localhost:20000/api/testCandidates"
         );
-        const fetchedCandidates = response.data;
+        const fetchedCandidates = candidatesResponse.data;
+        console.log("Candidates:", fetchedCandidates);
 
-        // Load previously selected candidates from sessionStorage
-        const storedUpdatedCandidates =
-          JSON.parse(sessionStorage.getItem("updatedCandidates")) || [];
-
-        // Ensure selected candidates only include valid ones from the current fetched candidates
-        const validSelectedCandidates = storedUpdatedCandidates.filter((id) =>
-          fetchedCandidates.some((candidate) => candidate._id === id)
-        );
-
-        // Update state with fetched candidates and valid selected candidates
+        // Update state with fetched candidates
         setCandidates(fetchedCandidates);
-        setUpdatedCandidates(validSelectedCandidates);
 
-        // Store the valid selected candidates back in sessionStorage
-        sessionStorage.setItem(
-          "updatedCandidates",
-          JSON.stringify(validSelectedCandidates)
-        );
+        // Fetch test details
+        const fetchTestDetails = async () => {
+          try {
+            const testResponse = await axios.get(
+              `http://localhost:20000/api/tests/${testId}`
+            );
+            const test = testResponse.data;
+            console.log("Test Details:", test);
+
+            setTestName(test.testName);
+            setStartDate(formatDate(test.startDate));
+            setEndDate(formatDate(test.endDate));
+            setAuthOption(test.authOption);
+            setPassword(test.password || "");
+            setQuestions(test.questions || []);
+
+            // Get candidates from test details
+            const testCandidates = test.candidates || [];
+
+            // Compare fetched candidates with test candidates based on name, email, and phone
+            const commonCandidates = fetchedCandidates.filter((candidate) =>
+              testCandidates.some(
+                (testCandidate) =>
+                  candidate.name === testCandidate.name &&
+                  candidate.email === testCandidate.email &&
+                  candidate.phone === testCandidate.phone
+              )
+            );
+
+            // Get previously stored selected candidates from sessionStorage
+            const storedUpdatedCandidates =
+              JSON.parse(sessionStorage.getItem("updatedCandidates")) || [];
+
+            console.log("Stored Updated Candidates:", storedUpdatedCandidates);
+
+            if (storedUpdatedCandidates.length === 0) {
+              // If no manually selected candidates exist, use common candidates
+              const commonCandidateIds = commonCandidates.map(
+                (candidate) => candidate._id
+              );
+
+              // Store the common candidates in sessionStorage
+              sessionStorage.setItem(
+                "updatedCandidates",
+                JSON.stringify(commonCandidateIds)
+              );
+
+              // Update the state with common candidates
+              setUpdatedCandidates(commonCandidateIds);
+            } else {
+              // If manually selected candidates exist, display them
+              setUpdatedCandidates(storedUpdatedCandidates);
+            }
+
+            setIsButtonDisabled(false);
+          } catch (error) {
+            console.error("Error fetching test details:", error);
+            showToast("An error occurred while fetching test details.");
+            setIsButtonDisabled(true);
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        // Fetch test details after fetching candidates
+        fetchTestDetails();
       } catch (error) {
         console.error("Error fetching candidates:", error);
-      } finally {
-        setLoading(false);
+        setLoading(false); // Ensure to stop loading in case of failure
       }
     };
 
     fetchCandidates();
-  }, []);
+  }, [testId]);
 
-  // Persist the selected candidates from sessionStorage when the component mounts
-  // useEffect(() => {
-  //   const savedSelectedCandidates = sessionStorage.getItem("updatedCandidates");
-  //   if (savedSelectedCandidates) {
-  //     setUpdatedCandidates(JSON.parse(savedSelectedCandidates));
-  //   }
-  // }, []);
-
+  // Handle manual candidate selection
   const handleCandidateSelect = (candidateId) => {
     setUpdatedCandidates((prevSelected) => {
       let updatedSelected;
@@ -181,6 +226,22 @@ const EditTest = () => {
     });
   };
 
+  const formatDate = (date) => {
+    return date
+      ? new Date(date.$date || date)
+          .toLocaleString("sv-SE", { timeZoneName: "short" })
+          .slice(0, 16)
+      : "";
+  };
+
+  // Persist the selected candidates from sessionStorage when the component mounts
+  // useEffect(() => {
+  //   const savedSelectedCandidates = sessionStorage.getItem("updatedCandidates");
+  //   if (savedSelectedCandidates) {
+  //     setUpdatedCandidates(JSON.parse(savedSelectedCandidates));
+  //   }
+  // }, []);
+
   useEffect(() => {
     // Store the selected auth option in session storage whenever it changes
     sessionStorage.setItem("authOption", authOption);
@@ -191,19 +252,19 @@ const EditTest = () => {
     sessionStorage.setItem("password", password);
   }, [password]);
 
-  useEffect(() => {
-    // Fetch available sector options when the component loads
-    const fetchSectorOptions = async () => {
-      try {
-        const response = await axios.get("/api/tests");
-        setSectorOptions(response.data);
-      } catch (error) {
-        console.error("Error fetching sector options:", error);
-      }
-    };
+  // useEffect(() => {
+  //   // Fetch available sector options when the component loads
+  //   const fetchSectorOptions = async () => {
+  //     try {
+  //       const response = await axios.get("/api/tests");
+  //       setSectorOptions(response.data);
+  //     } catch (error) {
+  //       console.error("Error fetching sector options:", error);
+  //     }
+  //   };
 
-    fetchSectorOptions();
-  }, []);
+  //   fetchSectorOptions();
+  // }, []);
 
   const handleSectorChange = (newSector) => {
     // Update the state to reflect the new sector value
@@ -212,65 +273,6 @@ const EditTest = () => {
       sector: newSector,
     }));
   };
-
-  // Fetch test details when component mounts
-  useEffect(() => {
-    const fetchTestDetails = async () => {
-      try {
-        const response = await axios.get(
-          `http://localhost:20000/api/tests/${testId}`
-        );
-        const test = response.data;
-
-        const formattedStartDate = test.startDate
-          ? new Date(test.startDate.$date || test.startDate)
-              .toLocaleString("sv-SE", { timeZoneName: "short" }) // Converts to local time
-              .slice(0, 16) // Format as YYYY-MM-DDTHH:MM for `datetime-local`
-          : "";
-
-        const formattedEndDate = test.endDate
-          ? new Date(test.endDate.$date || test.endDate)
-              .toLocaleString("sv-SE", { timeZoneName: "short" }) // Converts to local time
-              .slice(0, 16) // Format as YYYY-MM-DDTHH:MM for `datetime-local`
-          : "";
-
-        setTestName(test.testName);
-        setStartDate(formattedStartDate);
-        setEndDate(formattedEndDate);
-        setAuthOption(test.authOption);
-        setPassword(test.password || "");
-        setQuestions(test.questions || []);
-        setCandidates(test.candidates || []);
-
-        // Check if questions are saved in sessionStorage
-        const savedQuestions = JSON.parse(
-          sessionStorage.getItem(`test-questions-${testId}`)!
-        );
-
-        if (savedQuestions && savedQuestions.length > 0) {
-          setQuestions(savedQuestions);
-          setIsLoading(false);
-        } else {
-          setQuestions(test.questions || []);
-        }
-
-        // Load candidates from local storage if available
-        const savedCandidates =
-          JSON.parse(sessionStorage.getItem("candidates")!) || [];
-        setCandidates(
-          savedCandidates.length > 0 ? savedCandidates : test.candidates || []
-        );
-
-        // Enable the button after fetching test details
-        setIsButtonDisabled(false);
-      } catch (error) {
-        console.error("Error fetching test details:", error);
-        showToast("An error occurred while fetching test details.");
-      }
-    };
-
-    fetchTestDetails();
-  }, [testId]);
 
   const handleCloseViewModal = () => {
     setIsViewModalOpen(false);
@@ -341,22 +343,22 @@ const EditTest = () => {
     }
   };
 
-  useEffect(() => {
-    // Disable page refresh (beforeunload event)
-    const handleBeforeUnload = (e) => {
-      const message = "Are you sure you want to leave?";
-      e.returnValue = message; // Standard for most browsers
-      return message; // Some older browsers
-    };
+  // useEffect(() => {
+  //   // Disable page refresh (beforeunload event)
+  //   const handleBeforeUnload = (e) => {
+  //     const message = "Are you sure you want to leave?";
+  //     e.returnValue = message; // Standard for most browsers
+  //     return message; // Some older browsers
+  //   };
 
-    // Add event listeners
-    window.addEventListener("beforeunload", handleBeforeUnload);
+  //   // Add event listeners
+  //   window.addEventListener("beforeunload", handleBeforeUnload);
 
-    // Cleanup event listeners on component unmount
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, []);
+  //   // Cleanup event listeners on component unmount
+  //   return () => {
+  //     window.removeEventListener("beforeunload", handleBeforeUnload);
+  //   };
+  // }, []);
 
   const resetForm = () => {
     setTestName("");
@@ -552,6 +554,30 @@ const EditTest = () => {
     });
   };
 
+  // Filtering candidates based on search query
+  const filteredCandidates: Candidate[] = candidates.filter(
+    (candidate: any) => {
+      const query = searchQuery.toLowerCase();
+      return (
+        candidate.name.includes(query) ||
+        candidate.email.toLowerCase().includes(query) ||
+        candidate.phone.includes(query)
+      );
+    }
+  );
+
+  useEffect(() => {
+    // If the length of selected candidates matches the filtered candidates, set selectAll to true
+    if (
+      updatedCandidates.length === filteredCandidates.length &&
+      filteredCandidates.length > 0
+    ) {
+      setSelectAll(true);
+    } else {
+      setSelectAll(false);
+    }
+  }, [updatedCandidates, filteredCandidates]);
+
   const handleSelectAll = () => {
     if (selectAll) {
       // Deselect all candidates
@@ -574,16 +600,6 @@ const EditTest = () => {
     // Toggle selectAll state
     setSelectAll(!selectAll);
   };
-
-  const filteredCandidates = candidates.filter((candidate: Candidate) => {
-    const query = searchQuery.toLowerCase();
-    return (
-      candidate.email.toLowerCase().includes(query) ||
-      candidate.phone.includes(query) ||
-      candidate.name.includes(query) ||
-      (candidate.dob && candidate.dob.includes(query))
-    );
-  });
 
   return (
     <>
@@ -786,6 +802,7 @@ const EditTest = () => {
                                 handleCandidateSelect(candidate._id)
                               }
                             >
+                              {/* Hidden checkbox for accessibility or future use */}
                               <Checkbox
                                 checked={updatedCandidates.includes(
                                   candidate._id
@@ -793,21 +810,28 @@ const EditTest = () => {
                                 onChange={() =>
                                   handleCandidateSelect(candidate._id)
                                 }
-                                style={{ display: "none" }}
+                                style={{ display: "none" }} // Hiding the checkbox, keeping its state functional
                               />
+
+                              {/* Candidate Profile Image */}
                               <img
                                 src={candidate.profilePicture || DefaultProfile}
                                 alt={`${candidate.name}'s profile`}
                                 className="w-10 h-10 bg-slate-400 p-2.5 rounded-lg mr-4"
                               />
+
+                              {/* Candidate Details */}
                               <div className="flex flex-col justify-between items-start flex-grow">
-                                <text className="poppins2 text-[15px] text-black">{`${candidate.name}`}</text>
-                                <text className="montserrat text-[14px] text-gray-500">{`${
-                                  candidate.email || "Email not available"
-                                } - ${
-                                  candidate.phone || "Phone not available"
-                                }`}</text>
+                                <p className="poppins2 text-[15px] text-black">
+                                  {candidate.name}
+                                </p>
+                                <p className="montserrat text-[14px] text-gray-500">
+                                  {candidate.email || "Email not available"} -{" "}
+                                  {candidate.phone || "Phone not available"}
+                                </p>
                               </div>
+
+                              {/* Selection Indicator (✔ Button) */}
                               {updatedCandidates.includes(candidate._id) && (
                                 <Button
                                   component="a"
@@ -820,8 +844,8 @@ const EditTest = () => {
                                     marginLeft: "auto",
                                   }}
                                   onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleCandidateSelect(candidate._id);
+                                    e.stopPropagation(); // Prevents the div's onClick from firing
+                                    handleCandidateSelect(candidate._id); // Toggle selection on button click
                                   }}
                                 >
                                   ✔
@@ -843,27 +867,36 @@ const EditTest = () => {
           </div>
 
           <div className="flex justify-between items-center gap-5">
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={resetForm}
-              style={{
-                width: "100%",
-                marginBottom: "20px",
-                marginTop: "20px",
-                background: "#083344",
-              }}
+            <Popconfirm
+              title="Are you sure you want to reset all the test details?"
+              onConfirm={resetForm} // Call resetForm on confirm
+              onCancel={() => console.log("Reset cancelled")} // Log if cancelled
+              okText="Yes, Reset"
+              cancelText="Cancel"
+              placement="topRight" // Optional: Set placement for where the popconfirm appears
             >
-              <p
-                className="poppins text-[15px] px-0.5 normal-case text-white"
+              <Button
+                variant="contained"
+                color="primary"
                 style={{
-                  textDecorationThickness: "1.5px",
-                  textUnderlineOffset: "2px",
+                  width: "100%",
+                  marginBottom: "20px",
+                  marginTop: "20px",
+                  background: "#8298a2",
+                  color: "#fff",
                 }}
               >
-                Reset Test Details
-              </p>
-            </Button>
+                <p
+                  className="poppins text-[15px] px-0.5 normal-case text-white"
+                  style={{
+                    textDecorationThickness: "1.5px",
+                    textUnderlineOffset: "2px",
+                  }}
+                >
+                  Reset Test Details
+                </p>
+              </Button>
+            </Popconfirm>
             <Button
               variant="contained"
               onClick={handleEditTest}

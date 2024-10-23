@@ -159,15 +159,20 @@ const AddQuestion = ({ questions, setQuestions }) => {
         className="w-full min-h-[40px] rounded-[8px] mt-2 mb-3"
         value={sector}
         onChange={setSector}
+        allowClear
       >
         <Option value="" disabled>
           Select Sector
         </Option>
-        {sectors.map((sector, index) => (
-          <Option key={index} value={sector}>
-            {sector}
-          </Option>
-        ))}
+        <Option value="Verbal Ability">Verbal Ability</Option>
+        <Option value="Logical Reasoning">Logical Reasoning</Option>
+        <Option value="Quantitative Aptitude">Quantitative Aptitude</Option>
+        <Option value="Data Interpretation">Data Interpretation</Option>
+        <Option value="Technical Skills">Technical Skills</Option>
+        <Option value="Current Affairs">Current Affairs</Option>
+        <Option value="Situational Judgement Tests">
+          Situational Judgement Tests
+        </Option>
       </Select>
 
       <Button

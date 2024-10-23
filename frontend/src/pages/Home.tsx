@@ -172,7 +172,7 @@ const Home = () => {
         );
         const data = await response.json();
 
-        const updatedCandidates = data.map((candidate: any) => {
+        const selectedCandidates = data.map((candidate: any) => {
           if (candidate.profilePicture) {
             return {
               ...candidate,
@@ -182,15 +182,16 @@ const Home = () => {
           return candidate;
         });
 
-        setCandidates(updatedCandidates);
-        // localStorage.setItem("candidates", JSON.stringify(updatedCandidates)); // Store fetched candidates in localStorage
+        setCandidates(selectedCandidates);
+        // localStorage.setItem("candidates", JSON.stringify(selectedCandidates)); // Store fetched candidates in localStorage
       } catch (error) {
         console.error("Error fetching candidates:", error);
       }
     };
 
     // const storedCandidates = localStorage.getItem("candidates");
-    const storedSelectedCandidates = localStorage.getItem("selectedCandidates");
+    const storedSelectedCandidates =
+      sessionStorage.getItem("selectedCandidates");
 
     // if (storedCandidates) {
     //   setCandidates(JSON.parse(storedCandidates));
@@ -304,7 +305,7 @@ const Home = () => {
   // Update localStorage whenever selected candidates change
   useEffect(() => {
     if (selectedCandidates.length > 0) {
-      localStorage.setItem(
+      sessionStorage.setItem(
         "selectedCandidates",
         JSON.stringify(selectedCandidates)
       );
@@ -321,25 +322,48 @@ const Home = () => {
     );
   };
 
-  // Update localStorage/sessionStorage when selectedCandidates changes
+  // Filtering candidates based on search query
+  const filteredCandidates: Candidate[] = candidates.filter(
+    (candidate: any) => {
+      const query = searchQuery.toLowerCase();
+      return (
+        candidate.name.includes(query) ||
+        candidate.email.toLowerCase().includes(query) ||
+        candidate.phone.includes(query)
+      );
+    }
+  );
+
   useEffect(() => {
-    sessionStorage.setItem(
-      "selectedCandidates",
-      JSON.stringify(selectedCandidates)
-    );
-  }, [selectedCandidates]);
+    // If the length of selected candidates matches the filtered candidates, set selectAll to true
+    if (
+      selectedCandidates.length === filteredCandidates.length &&
+      filteredCandidates.length > 0
+    ) {
+      setSelectAll(true);
+    } else {
+      setSelectAll(false);
+    }
+  }, [selectedCandidates, filteredCandidates]);
 
   // Handle select all logic
   const handleSelectAll = () => {
     if (selectAll) {
       // Deselect all candidates
       setSelectedCandidates([]);
+      // Clear sessionStorage since no candidates are selected
+      sessionStorage.setItem("selectedCandidates", JSON.stringify([]));
     } else {
       // Select all filtered candidates
       const allCandidateIds = filteredCandidates.map(
         (candidate: Candidate) => candidate._id
       );
       setSelectedCandidates(allCandidateIds);
+      // Update sessionStorage with all selected candidate IDs
+      sessionStorage.setItem(
+        "selectedCandidates",
+        JSON.stringify(allCandidateIds)
+      );
     }
 
     // Toggle selectAll state
@@ -489,18 +513,6 @@ const Home = () => {
     setEndDate(localDate); // Store local date for display in the input
   };
 
-  // Filtering candidates based on search query
-  const filteredCandidates: Candidate[] = candidates.filter(
-    (candidate: any) => {
-      const query = searchQuery.toLowerCase();
-      return (
-        candidate.email.toLowerCase().includes(query) ||
-        candidate.phone.includes(query) ||
-        candidate.name.includes(query) ||
-        candidate.dob.includes(query)
-      );
-    }
-  );
   return (
     <>
       <div className="flex justify-between">

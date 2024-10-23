@@ -6,7 +6,17 @@ import { styled } from "@mui/material/styles";
 import Checkbox, { CheckboxProps } from "@mui/material/Checkbox";
 import Confetti from "react-confetti";
 import useWindowSize from "react-use/lib/useWindowSize";
-import { Spinner } from "@nextui-org/react";
+import {
+  Button,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  Slider,
+  Spinner,
+  useDisclosure,
+} from "@nextui-org/react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { nightOwl } from "react-syntax-highlighter/dist/esm/styles/prism";
 import {
@@ -16,23 +26,25 @@ import {
   FormControlLabel,
   FormGroup,
   MenuItem,
-  Select,
   Box,
   RadioProps,
 } from "@mui/material";
 import { showToast } from "../toastUtil.js";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
-import backgroundImage from "../assets/bg-image.jpg";
+import backgroundImage from "../assets/bg_image.jpg";
 import DragIndicatorTwoToneIcon from "@mui/icons-material/DragIndicatorTwoTone";
 import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
 import BookmarkIcon from "@mui/icons-material/Bookmark";
 import hexagonal from "../assets/hexagonal.svg";
 import tick from "../assets/tick.svg";
-import { Input, Switch } from "antd";
+import { ColorPicker, Input, Popconfirm, Switch } from "antd";
+import Draggable from "react-draggable";
+import { Select, SelectItem } from "@nextui-org/react";
 import Wave from "react-wavify";
 // import DraggableCalculator from "./Calculator/DraggableCalculator.tsx";
 import Calculator from "./Calculator/Calculator.tsx";
+import { set } from "mongoose";
 
 // type SelectedAnswers = {
 //   [key: string]: number[] | number;
@@ -48,6 +60,25 @@ interface Question {
 }
 
 const QuestionComponent: React.FC = () => {
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+  // const [isCanvasOpen, setIsCanvasOpen] = useState(false);
+
+  const onCalculatorOpen = () => {
+    setIsCalculatorOpen(true);
+  };
+
+  const onCalculatorClose = () => {
+    setIsCalculatorOpen(false);
+  };
+
+  // const onCanvasOpen = () => {
+  //   setIsCanvasOpen(true);
+  // };
+
+  // const onCanvasClose = () => {
+  //   setIsCanvasOpen(false);
+  // };
+
   const [fullScreenMode, setFullScreenMode] = useState<boolean>(true);
   const [isSubmitDisabled, setIsSubmitDisabled] = useState(true);
   const [sectors, setSectors] = useState([0]);
@@ -65,7 +96,8 @@ const QuestionComponent: React.FC = () => {
 
   const formRef = useRef(null);
   const { width, height } = useWindowSize();
-  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [bookmarks, setBookmarks] = useState({});
+  const [isBookmarked, setIsBookmarked] = useState({});
   const [isSubmissionSuccessful, setIsSubmissionSuccessful] = useState(false);
   const [isAutoSubmitted, setIsAutoSubmitted] = useState<boolean>(false);
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([0]);
@@ -95,65 +127,96 @@ const QuestionComponent: React.FC = () => {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [score, setScore] = useState<number | null>(null);
   const { testId } = useParams<{ testId: string }>();
-  const [leftWidth, setLeftWidth] = useState(70);
+  const [leftWidth, setLeftWidth] = useState(80);
   const isResizing = useRef(false);
   const navigate = useNavigate();
   const requestRef = useRef<number | null>(null);
   const [noteText, setNoteText] = useState("");
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const ctxRef = useRef<any>(null);
-  // const [isDrawing, setIsDrawing] = useState(false);
-  // const [color] = useState("#000");
-  // const [lineWidth] = useState(3);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [color, setColor] = useState("#000");
+  const [lineWidth, setLineWidth] = useState(2);
   const [scale, setScale] = useState(1);
   const [offsetX] = useState(0);
   const [offsetY] = useState(0);
 
-  console.log(malpractice, score, totalQuestions, tabSwitchCount);
-  // Load bookmark state from sessionStorage when the component mounts
+  if (10 < 0) {
+    console.log(malpractice, score, totalQuestions, tabSwitchCount);
+  }
+
+  // Load bookmarks from sessionStorage when the component mounts
   useEffect(() => {
-    const storedBookmarkState = sessionStorage.getItem("isBookmarked");
-    if (storedBookmarkState !== null) {
-      setIsBookmarked(JSON.parse(storedBookmarkState));
+    const storedBookmarks = sessionStorage.getItem("bookmarks");
+    if (storedBookmarks) {
+      setIsBookmarked(JSON.parse(storedBookmarks));
+    }
+
+    // Load the selected question index from sessionStorage
+    const storedIndex = sessionStorage.getItem("selectedQuestionIndex");
+    if (storedIndex !== null) {
+      setSelectedIndexes([parseInt(storedIndex, 10)]);
     }
   }, []);
 
-  // Toggle bookmark state and store in sessionStorage
+  // Toggle bookmark for a specific question and store in sessionStorage
   const handleBookmarkClick = () => {
-    setIsBookmarked((prev) => {
-      const newBookmarkState = !prev;
-      sessionStorage.setItem("isBookmarked", JSON.stringify(newBookmarkState));
-      return newBookmarkState;
+    const currentQuestionIndex = selectedIndexes[0]; // Get the index of the current question
+
+    setIsBookmarked((prevBookmarks) => {
+      const updatedBookmarks = {
+        ...prevBookmarks,
+        [currentQuestionIndex]: !prevBookmarks[currentQuestionIndex], // Toggle bookmark for the current question
+      };
+
+      // Save updated bookmarks to sessionStorage
+      sessionStorage.setItem("bookmarks", JSON.stringify(updatedBookmarks));
+
+      return updatedBookmarks;
     });
   };
 
+  // Render Bookmark Icon based on the current question
+  const renderBookmarkIcon = () => {
+    const currentQuestionIndex = selectedIndexes[0];
+
+    return isBookmarked[currentQuestionIndex] ? (
+      <BookmarkIcon /> // Render filled bookmark icon
+    ) : (
+      <BookmarkBorderIcon /> // Render border bookmark icon
+    );
+  };
+
+  // Calculate total bookmarked questions
+  const totalBookmarks = Object.values(isBookmarked).filter(Boolean).length;
+
   // Initialize canvas
-  // const startDrawing = (e) => {
-  //   setIsDrawing(true);
-  //   const canvas = canvasRef.current;
-  //   ctxRef.current = canvas!.getContext("2d");
+  const startDrawing = (e) => {
+    setIsDrawing(true);
+    const canvas = canvasRef.current;
+    ctxRef.current = canvas!.getContext("2d");
 
-  //   // Set stroke style and width
-  //   ctxRef.current.strokeStyle = color;
-  //   ctxRef.current.lineWidth = lineWidth;
-  //   ctxRef.current.lineCap = "round";
+    // Set stroke style and width
+    ctxRef.current.strokeStyle = color;
+    ctxRef.current.lineWidth = lineWidth;
+    ctxRef.current.lineCap = "round";
 
-  //   ctxRef.current.beginPath();
-  //   ctxRef.current.moveTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
-  // };
+    ctxRef.current.beginPath();
+    ctxRef.current.moveTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+  };
 
-  // const draw = (e) => {
-  //   if (!isDrawing) return;
-  //   ctxRef.current.lineTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
-  //   ctxRef.current.stroke();
-  // };
+  const draw = (e) => {
+    if (!isDrawing) return;
+    ctxRef.current.lineTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+    ctxRef.current.stroke();
+  };
 
-  // const stopDrawing = () => {
-  //   if (ctxRef.current) {
-  //     setIsDrawing(false);
-  //     ctxRef.current.closePath();
-  //   }
-  // };
+  const stopDrawing = () => {
+    if (ctxRef.current) {
+      setIsDrawing(false);
+      ctxRef.current.closePath();
+    }
+  };
 
   // Clear canvas function
   const clearCanvas = () => {
@@ -438,6 +501,10 @@ const QuestionComponent: React.FC = () => {
       setIsSubmissionSuccessful,
     ]
   );
+
+  const triggerFormSubmit = () => {
+    handleSubmit();
+  };
 
   const handleSubmit = useCallback(
     async (
@@ -1137,11 +1204,6 @@ const QuestionComponent: React.FC = () => {
     };
   }, [fullScreenMode]);
 
-  // Function to trigger form submission from external button
-  const triggerFormSubmit = () => {
-    handleSubmit();
-  };
-
   useEffect(() => {
     // Disable page refresh (beforeunload event)
     const handleBeforeUnload = (e) => {
@@ -1579,7 +1641,7 @@ const QuestionComponent: React.FC = () => {
               <>
                 <div className="bg-gray-50 h-screen flex flex-col justify-between">
                   <div
-                    className="z-50 w-full flex justify-between bg-slate-100 px-10 py-2.5 shadow-slate-200 shadow-md"
+                    className="z-50 w-full max-h-15 flex justify-between bg-slate-100 px-10 py-2.5 shadow-slate-200 shadow-md"
                     style={{
                       backgroundImage: `url(${backgroundImage})`,
                       backgroundRepeat: "no-repeat",
@@ -1593,7 +1655,7 @@ const QuestionComponent: React.FC = () => {
                       </h2>
                     )}
                     <div className="flex justify-between gap-6 items-center font-medium text-gray-700 text-[14.5px]">
-                      <div className="items-center hidden space-x-2">
+                      <div className="items-center space-x-2">
                         <span className="text-[#083344] font-medium">
                           {fullScreenMode ? "Minimize" : "Full Screen"}
                         </span>
@@ -1617,88 +1679,200 @@ const QuestionComponent: React.FC = () => {
                             fontSize="small"
                             className="text-gray-400"
                           />
-                          <p className="text-[17px] text-green-600 poppins">
+                          <p className="text-[17px] min-w-[80px] text-green-600 poppins">
                             {formatTime(remainingTime)}
                           </p>
                         </h2>
                       )}
-                      <button
-                        onClick={triggerFormSubmit}
-                        disabled={isSubmitDisabled || submitLoading}
-                        type="submit"
-                        className="bg-cyan-700 p-2.5 rounded-md flex items-center gap-2 text-white font-medium text-[14.5px]"
-                        // disabled={!areAllQuestionsAnswered}
+                      <Popconfirm
+                        title="Are you sure you want to submit the test?"
+                        description="Once submitted, you will not be able to make changes."
+                        onConfirm={triggerFormSubmit}
+                        onCancel={() => console.log("Submission cancelled")}
+                        okText="Yes"
+                        cancelText="No"
+                        placement="bottomRight"
+                        okButtonProps={{ loading: submitLoading }}
                       >
-                        {submitLoading && <Spinner size="sm" color="default" />}
-                        Submit Test
-                      </button>
+                        <button
+                          disabled={isSubmitDisabled || submitLoading}
+                          type="submit"
+                          className="bg-cyan-700 p-2.5 rounded-md flex items-center gap-2 text-white font-medium text-[14.5px]"
+                        >
+                          {submitLoading && (
+                            <Spinner size="sm" color="default" />
+                          )}
+                          Submit Test
+                        </button>
+                      </Popconfirm>
                     </div>
                   </div>
 
-                  <div className="max-w-screen h-full flex items-center justify-between pl-10 gap-5 bg-slate-50">
-                    <div className="max-w-[calc(100vw-160px)] min-w-[calc(100vw-160px)] max-h-[72vh] flex items-center justify-between gap-2">
-                      {/* Left Panel */}
+                  <div className="max-w-screen overflow-hidden h-[calc(100vh-100px)] flex items-center justify-between gap-5 bg-slate-50">
+                    <div className="max-h-[calc(100%-80px)] min-h-[calc(100%-80px)] flex flex-col justify-start">
+                      <FormGroup className="max-h-[calc(100%-80px)] min-h-[calc(100%-80px)]">
+                        <Box
+                          sx={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(2, 1fr)",
+                            width: "92px",
+                            minHeight: "140px",
+                            maxHeight: "100%",
+                            overflow: "hidden",
+                            overflowY: "scroll",
+                            padding: "14px 5px",
+                            paddingBottom: "80px",
+                            alignItems: "start",
+                            justifyItems: "center",
+                            backgroundColor: "#ffffff",
+                            boxShadow: "0px 0px 7px 0px #e2e8f0",
+                            borderRadius: "0px 10px 0px 0px",
+                            transition: "scale 0.3s ease-in-out",
+                            "&:hover": {
+                              scale: 1.01,
+                              marginLeft: "0.2px",
+                            },
+                          }}
+                        >
+                          {questions.map((question, index) => (
+                            <Box
+                              key={question._id}
+                              onClick={() => handleBoxClick(index)}
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                width: "31px",
+                                height: "31px",
+                                borderRadius: "5px",
+                                border: "1.5px solid",
+                                borderColor: selectedIndexes.includes(index)
+                                  ? "#083344"
+                                  : selectedAnswers[question._id]
+                                  ? "#e2e8f0"
+                                  : "#e2e8f0",
+                                backgroundColor: selectedIndexes.includes(index)
+                                  ? "#0e7490"
+                                  : selectedAnswers[question._id]
+                                  ? "#b2d5dc"
+                                  : "white",
+                                color: selectedIndexes.includes(index)
+                                  ? "white"
+                                  : selectedAnswers[question._id]
+                                  ? "#083344"
+                                  : "black",
+                                cursor: "pointer",
+                                marginBottom: "10px",
+                                textAlign: "center",
+                              }}
+                            >
+                              <p className="poppins text-[16px] font-medium">
+                                {index + 1}
+                              </p>
+                            </Box>
+                          ))}
+                        </Box>
+                      </FormGroup>
+                      <span className="w-full h-[80px] z-50 -mt-[80px] from-white to-transparent bg-gradient-to-t"></span>
                       <div
-                        className="h-full min-w-[500px] w-full p-1"
+                        className="bg-white w-full min-h-[120px] overflow-hidden max-h-[120px] flex flex-col justify-start z-50 text-[10px] poppins2 text-center"
                         style={{
-                          width: `${leftWidth}%`,
+                          borderRadius: "0px 0px 10px 0px",
+                          boxShadow: "0px 10px 7px 0px #e2e8f0",
                         }}
                       >
-                        <div className="gap-5 w-full flex flex-col">
-                          <div
-                            className="w-full h-14 flex items-center justify-between px-4 text-cyan-900 bg-white border-[2px] border-[#155e75] rounded-xl"
-                            style={{ boxShadow: "0px 2.5px 0px 0px #155e75" }}
-                          >
-                            <div className="flex gap-2">
-                              {sectors.length > 0 ? (
-                                sectors.map((sector, index) => (
-                                  <button
-                                    key={index}
-                                    className={`cursor-pointer flex gap-1.5 text-[13.5px] poppins rounded-lg px-4 py-2 ${
-                                      activeSector === sector
-                                        ? "bg-[#155e75] text-white"
-                                        : "bg-white text-[#155e75]"
-                                    }`}
-                                    onClick={() => handleSectorClick(sector)}
-                                  >
-                                    {sector}
-                                    <span
-                                      className={`w-[20px] h-[20px] poppins text-white rounded-full flex items-center justify-center bg-cyan-900 ${
-                                        activeSector === sector
-                                          ? "bg-white text-[#155e75]"
-                                          : "bg-[#155e75] text-white"
-                                      }`}
-                                    >
-                                      {sectorCounts[sector]}
-                                    </span>
-                                  </button>
-                                ))
+                        <span className="bg-gradient-to-r from-emerald-100 to-transparent w-full h-[60px] flex flex-col justify-center items-center rounded-tr-lg border-t-2 border-green-300">
+                          <h1 className="">Answered</h1>
+                          <p className="flex text-nowrap text-green-500">
+                            {
+                              Object.values(selectedAnswers).filter(
+                                (answer) => answer !== null && answer.length > 0
+                              ).length
+                            }
+                            {"/"}
+                            {questions.map((question, index) =>
+                              selectedIndexes.includes(index) ? (
+                                <p className="flex">{questions.length}</p>
                               ) : (
-                                <p>No sectors available</p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div
-                            className="w-full h-14 flex items-center justify-between px-4 text-cyan-900 bg-white border-[2px] border-[#155e75] rounded-xl"
-                            style={{
-                              boxShadow: "0px 2.5px 0px 0px #155e75",
-                            }}
-                          >
-                            <div className="">
-                              {questions.map((question, index) =>
-                                selectedIndexes.includes(index) ? (
-                                  <p className="font-medium flex">
-                                    {question.required && (
-                                      <p className="text-red-600 mr-0.5">*</p>
-                                    )}
-                                    Question No: {index + 1} {" / "}
-                                    {questions.length}
-                                  </p>
-                                ) : null
-                              )}
-                            </div>
-                            {/* {questions.map((question, index) =>
+                                ""
+                              )
+                            )}
+                          </p>
+                        </span>
+                        <span className="bg-gradient-to-r from-sky-100 to-transparent w-full h-[60px] flex flex-col justify-center items-center rounded-tr-lg border-t-2 border-sky-300">
+                          <h1 className="">Bookmarked</h1>
+                          <p className="text-sky-500">
+                            {totalBookmarks}/{questions.length}
+                          </p>
+                        </span>
+                        {/* <span className="bg-gradient-to-r from-red-100 to-transparent w-full h-[60px] flex flex-col justify-center items-center rounded-tr-lg border-t-2 border-red-300">
+                          <h1 className="">Not Viewed</h1>
+                          <p className="text-red-500">7/10</p>
+                        </span> */}
+                      </div>
+                    </div>
+                    <div className="w-[calc(100vw-120px)] overflow-hidden py-10 pr-9 h-full max-h-[calc(100vh-100px)]">
+                      <span className="flex items-center justify-between overflow-hidden h-full">
+                        {/* Left Panel */}
+                        <div
+                          className="h-full min-w-[60%] w-full"
+                          style={{
+                            width: `${leftWidth}%`,
+                          }}
+                        >
+                          <div className="gap-2 w-full h-full justify-between flex flex-col">
+                            <div
+                              className="w-full min-h-20 py-3 flex flex-col justify-center px-4 text-cyan-900 bg-white border-[2px] border-[#155e75] rounded-xl"
+                              style={{
+                                boxShadow: "0px 2.5px 0px 0px #155e75",
+                              }}
+                            >
+                              <div className="bg-slate-50 py-2 h-10 border-b-1 border-cyan-900 border-opacity-10 rounded-lg flex gap-3 items-center justify-start overflow-x-scroll px-2.5">
+                                {sectors.map(
+                                  (sector, index) =>
+                                    sector && (
+                                      <button
+                                        key={index}
+                                        className={`cursor-pointer flex gap-1.5 text-[13.5px] poppins text-nowrap rounded-lg px-4 py-1.5  duration-500 ${
+                                          activeSector === sector
+                                            ? "bg-[#155e75] border-[1px] border-[#8eaeb8] text-white"
+                                            : "bg-white text-[#155e75]"
+                                        }`}
+                                        onClick={() =>
+                                          handleSectorClick(sector)
+                                        }
+                                      >
+                                        {sector}
+                                        <span
+                                          className={`w-[20px] h-[20px] p-1 text-[13px] poppins shadow-md rounded-full flex items-center justify-center bg-cyan-900 ${
+                                            activeSector === sector
+                                              ? "bg-white text-[#155e75]"
+                                              : "bg-[#155e75] text-white"
+                                          }`}
+                                        >
+                                          {sectorCounts[sector]}
+                                        </span>
+                                      </button>
+                                    )
+                                )}
+                              </div>
+                              <div className="flex justify-between pt-2 items-center">
+                                <div className="">
+                                  {questions.map((question, index) =>
+                                    selectedIndexes.includes(index) ? (
+                                      <p className="font-medium flex">
+                                        {question.required && (
+                                          <p className="text-red-600 mr-0.5">
+                                            *
+                                          </p>
+                                        )}
+                                        Question No: {index + 1} {" / "}
+                                        {questions.length}
+                                      </p>
+                                    ) : null
+                                  )}
+                                </div>
+                                {/* {questions.map((question, index) =>
                               selectedIndexes.includes(index) ? (
                                 <div className="">
                                   {question.required && (
@@ -1709,342 +1883,356 @@ const QuestionComponent: React.FC = () => {
                                 </div>
                               ) : null
                             )} */}
-                            <div
-                              className="cursor-pointer"
-                              onClick={handleBookmarkClick}
-                            >
-                              {isBookmarked ? (
-                                <BookmarkIcon />
-                              ) : (
-                                <BookmarkBorderIcon />
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Questions */}
-                          <form
-                            ref={formRef}
-                            onSubmit={() => handleSubmit}
-                            className="px-10 py-8 h-auto bg-white overflow-hidden select-none rounded-xl border-[2px] border-[#155e75]"
-                            style={{
-                              boxShadow: "0px 2.5px 0px 0px #155e75",
-                            }}
-                          >
-                            {questions.map((question, index) =>
-                              selectedIndexes.includes(index) ? (
                                 <div
-                                  className="h-[46vh] flex flex-col justify-between overflow-y-scroll"
-                                  key={question._id}
+                                  className="cursor-pointer"
+                                  onClick={handleBookmarkClick}
                                 >
-                                  <div className="mt-4 h-auto">
-                                    {splitText(question.questionText).map(
-                                      (part, index) => {
-                                        // Handle code part rendering
-                                        if (part.type === "code") {
-                                          return (
-                                            <pre
-                                              key={index}
-                                              className="mb-2 max-h-[200px] w-full rounded-lg bg-[#011827] overflow-scroll"
-                                            >
-                                              <SyntaxHighlighter
-                                                language="javascript"
-                                                style={nightOwl}
-                                              >
-                                                {part.content}
-                                              </SyntaxHighlighter>
-                                            </pre>
-                                          );
-                                        }
+                                  {renderBookmarkIcon()}
+                                </div>
+                              </div>
+                            </div>
 
-                                        // Handle bold part rendering (split by lines)
-                                        if (part.type === "bold") {
+                            {/* Questions */}
+                            <form
+                              ref={formRef}
+                              onSubmit={() => handleSubmit}
+                              className="px-10 py-6 flex flex-col bg-white h-full max-h-[calc(100%-200px)] overflow-hidden select-none rounded-xl border-[2px] border-[#155e75]"
+                              style={{
+                                boxShadow: "0px 2.5px 0px 0px #155e75",
+                              }}
+                            >
+                              {questions.map((question, index) =>
+                                selectedIndexes.includes(index) ? (
+                                  <div
+                                    className="h-[46vh] flex flex-col justify-between overflow-y-scroll"
+                                    key={question._id}
+                                  >
+                                    <div className="mt-4 h-auto">
+                                      {splitText(question.questionText).map(
+                                        (part, index) => {
+                                          // Handle code part rendering
+                                          if (part.type === "code") {
+                                            return (
+                                              <pre
+                                                key={index}
+                                                className="mb-2 max-h-[200px] w-full rounded-lg bg-[#011827] overflow-scroll"
+                                              >
+                                                <SyntaxHighlighter
+                                                  language="javascript"
+                                                  style={nightOwl}
+                                                >
+                                                  {part.content}
+                                                </SyntaxHighlighter>
+                                              </pre>
+                                            );
+                                          }
+
+                                          // Handle bold part rendering (split by lines)
+                                          if (part.type === "bold") {
+                                            return part.content
+                                              .split("\n")
+                                              .map((line, lineIdx) => (
+                                                <p
+                                                  key={lineIdx}
+                                                  className="font-bold text-black leading-6"
+                                                >
+                                                  {part.content.trim()}
+                                                </p>
+                                              ));
+                                          }
+
+                                          // For regular text part
                                           return part.content
                                             .split("\n")
-                                            .map((line, lineIdx) => (
-                                              <p
-                                                key={lineIdx}
-                                                className="font-bold text-black leading-6"
-                                              >
-                                                {part.content.trim()}
-                                              </p>
-                                            ));
-                                        }
+                                            .map((line, lineIdx) => {
+                                              // Check if the line starts with a bullet point (•) or ends with a period
+                                              if (line.trim().startsWith("•")) {
+                                                return (
+                                                  <p
+                                                    key={lineIdx}
+                                                    className="text-[14px] poppins0 text-black leading-6"
+                                                  >
+                                                    <span className="list-disc pl-6">
+                                                      {line.trim()}
+                                                    </span>
+                                                  </p>
+                                                );
+                                              }
 
-                                        // For regular text part
-                                        return part.content
-                                          .split("\n")
-                                          .map((line, lineIdx) => {
-                                            // Check if the line starts with a bullet point (•) or ends with a period
-                                            if (line.trim().startsWith("•")) {
+                                              // For normal lines (just regular text)
                                               return (
                                                 <p
                                                   key={lineIdx}
-                                                  className="text-[14px] poppins0 text-black leading-6"
+                                                  className="text-[17px] poppins2 text-black leading-6"
                                                 >
-                                                  <span className="list-disc pl-6">
-                                                    {line.trim()}
-                                                  </span>
+                                                  {line.trim()}
                                                 </p>
                                               );
-                                            }
+                                            });
+                                        }
+                                      )}
 
-                                            // For normal lines (just regular text)
-                                            return (
-                                              <p
-                                                key={lineIdx}
-                                                className="text-[14px] poppins text-black leading-6"
-                                              >
-                                                {line.trim()}
-                                              </p>
-                                            );
-                                          });
-                                      }
-                                    )}
+                                      <div className="h-[1px] mt-2 w-full opacity-20 bg-cyan-800 rounded-lg"></div>
+                                    </div>
+                                    <FormControl
+                                      component="fieldset"
+                                      style={{ margin: "20px 0" }}
+                                      className="w-full h-full"
+                                    >
+                                      {/* Text Input */}
+                                      {question.inputType === "Text Input" && (
+                                        <textarea
+                                          placeholder="Type your answer here!"
+                                          onChange={(e) =>
+                                            handleInputChange(
+                                              question._id,
+                                              e.target.value
+                                            )
+                                          }
+                                          value={
+                                            selectedAnswers[
+                                              question._id
+                                            ]?.[0] || ""
+                                          }
+                                          className="w-full min-h-full poppins0 text-[14px] focus:outline-none resize-none"
+                                        />
+                                      )}
 
-                                    <div className="h-[1px] mt-2 w-full opacity-20 bg-cyan-800 rounded-lg"></div>
-                                  </div>
-                                  <FormControl
-                                    component="fieldset"
-                                    style={{ margin: "20px 0" }}
-                                    className="w-full h-full"
-                                  >
-                                    {/* Text Input */}
-                                    {question.inputType === "Text Input" && (
-                                      <textarea
-                                        placeholder="Type your answer here!"
-                                        onChange={(e) =>
-                                          handleInputChange(
-                                            question._id,
-                                            e.target.value
-                                          )
-                                        }
-                                        value={
-                                          selectedAnswers[question._id]?.[0] ||
-                                          ""
-                                        }
-                                        className="w-full min-h-full focus:outline-none resize-none"
-                                      />
-                                    )}
-
-                                    {/* Select Dropdown */}
-                                    {question.inputType === "Select" && (
-                                      <Select
-                                        value={
-                                          selectedAnswers[question._id]?.[0]
-                                        }
-                                        onChange={(e) =>
-                                          handleSingleAnswerChange(
-                                            question._id,
-                                            e.target.value
-                                          )
-                                        }
-                                        fullWidth
-                                        style={{ marginTop: "10px" }}
-                                        displayEmpty
-                                        renderValue={(selected) =>
-                                          typeof selected === "number" ? (
-                                            question.options[selected] // Display the corresponding option text for the index
-                                          ) : (
-                                            <p className="text-gray-500">
-                                              Select answer
-                                            </p>
-                                          )
-                                        }
-                                        MenuProps={{
-                                          PaperProps: {
-                                            style: {
-                                              maxHeight: 48 * 4.5 + 8, // Adjust as needed
-                                              width: 250,
-                                            },
-                                          },
-                                          disableAutoFocusItem: true, // Prevent automatic closing
-                                        }}
-                                      >
-                                        <MenuItem value="" disabled>
-                                          Select answer
-                                        </MenuItem>
-                                        {question.options.map(
-                                          (option, index) => (
-                                            <MenuItem key={index} value={index}>
-                                              {" "}
-                                              {/* Use index as the value */}
-                                              {option}
-                                            </MenuItem>
-                                          )
-                                        )}
-                                      </Select>
-                                    )}
-
-                                    {/* Radio Buttons */}
-                                    {question.inputType === "Radio" && (
-                                      <RadioGroup
-                                        className="h-[40vh]"
-                                        value={
-                                          selectedAnswers[question._id]?.[0]
-                                        }
-                                        onChange={(e) =>
-                                          handleSingleAnswerChange(
-                                            question._id,
-                                            e.target.value
-                                          )
-                                        }
-                                        style={{ marginTop: "10px" }}
-                                      >
-                                        {question.options.map(
-                                          (option, index) => (
-                                            <FormControlLabel
-                                              key={index}
-                                              value={index} // Use index as numeric value
-                                              control={
-                                                <BpRadio
-                                                  icon={<BpIcon />} // Pass the custom icon to the radio button
-                                                />
-                                              }
-                                              label={option}
-                                            />
-                                          )
-                                        )}
-                                      </RadioGroup>
-                                    )}
-
-                                    {/* Multiple Choice (Checkboxes) */}
-                                    {question.inputType ===
-                                      "Multiple Choice" && (
-                                      <FormGroup className="h-[40vh]">
-                                        {question.options.map(
-                                          (option, index) => (
-                                            <FormControlLabel
-                                              key={index}
-                                              control={
-                                                <BpCheckbox
-                                                  checked={selectedAnswers[
+                                      {/* Select Dropdown */}
+                                      {question.inputType === "Select" && (
+                                        <Select
+                                          size="lg"
+                                          placeholder="Select Sector"
+                                          color="default"
+                                          className="border-cyan-900 border-opacity-10 border-[1px] rounded-[15px]"
+                                          value={
+                                            selectedAnswers[question._id]?.[0]
+                                          }
+                                          selectedKeys={
+                                            selectedAnswers[question._id]?.[0]
+                                              ? [
+                                                  selectedAnswers[
                                                     question._id
-                                                  ]?.includes(index)}
-                                                  onChange={(e) =>
-                                                    handleMultipleChoiceChange(
-                                                      question._id,
-                                                      index,
-                                                      e.target.checked
-                                                    )
-                                                  }
-                                                />
-                                              }
-                                              label={option}
-                                            />
-                                          )
-                                        )}
-                                      </FormGroup>
-                                    )}
-                                  </FormControl>
-                                </div>
-                              ) : null
-                            )}
-                          </form>
+                                                  ]?.[0].toString(),
+                                                ]
+                                              : undefined
+                                          }
+                                          onSelectionChange={(keys) =>
+                                            handleSingleAnswerChange(
+                                              question._id,
+                                              Array.from(keys)[0]
+                                            )
+                                          }
+                                        >
+                                          {question.options.map(
+                                            (option, index) => (
+                                              <SelectItem
+                                                className={
+                                                  "w-full items-center poppins0 text-[14px] px-5 min-h-10 rounded-lg"
+                                                }
+                                                key={index}
+                                                value={index.toString()}
+                                              >
+                                                {option}
+                                              </SelectItem>
+                                            )
+                                          )}
+                                        </Select>
+                                      )}
 
-                          {/* Pagination Controls */}
-                          <div
-                            className="w-full h-16 flex items-center justify-between px-4 border-[2px] border-[#155e75] text-slate-600 bg-white rounded-xl"
-                            style={{
-                              boxShadow: "0px 2.5px 0px 0px #155e75",
-                            }}
-                          >
-                            <div className="flex gap-7">
-                              <h1 className="text-[#164e63]">
-                                Focus & Conquer!
-                              </h1>
-                            </div>
-                            <Box
-                              sx={{
-                                display: "flex",
-                                gap: "12px",
-                                color: "#164e63",
-                                alignItems: "center",
+                                      {/* Radio Buttons */}
+                                      {question.inputType === "Radio" && (
+                                        <RadioGroup
+                                          className="h-[40vh] w-full pl-5"
+                                          value={
+                                            selectedAnswers[question._id]?.[0]
+                                          }
+                                          onChange={(e) =>
+                                            handleSingleAnswerChange(
+                                              question._id,
+                                              e.target.value
+                                            )
+                                          }
+                                          style={{ marginTop: "10px" }}
+                                        >
+                                          {question.options.map(
+                                            (option, index) => (
+                                              <FormControlLabel
+                                                key={index}
+                                                value={index.toString()} // Use index as a string value
+                                                control={
+                                                  <BpRadio
+                                                    icon={<BpRadioIcon />} // Custom icon for the radio button
+                                                  />
+                                                }
+                                                label={option}
+                                                className={`w-full flex justify-start poppins0 gap-2 items-center text-[14px] my-1 py-2 px-1 min-h-12 rounded-lg ${
+                                                  selectedAnswers[
+                                                    question._id
+                                                  ]?.[0] === index.toString()
+                                                    ? "bg-[#b2d5dc] border-[1px] border-cyan-900 border-opacity-20"
+                                                    : "bg-slate-100"
+                                                }`}
+                                              />
+                                            )
+                                          )}
+                                        </RadioGroup>
+                                      )}
+
+                                      {/* Multiple Choice (Checkboxes) */}
+                                      {question.inputType ===
+                                        "Multiple Choice" && (
+                                        <FormGroup className="h-[40vh] w-full pl-5">
+                                          {question.options.map(
+                                            (option, index) => (
+                                              <FormControlLabel
+                                                key={index}
+                                                className={`w-full flex justify-start gap-2 items-center poppins0 text-[14px] my-1 py-2 px-1 min-h-12 rounded-lg ${
+                                                  selectedAnswers[
+                                                    question._id
+                                                  ]?.includes(index)
+                                                    ? "bg-[#b2d5dc] border-[1px] border-cyan-900 border-opacity-20"
+                                                    : "bg-slate-100"
+                                                }`}
+                                                control={
+                                                  <BpCheckbox
+                                                    checked={selectedAnswers[
+                                                      question._id
+                                                    ]?.includes(index)}
+                                                    onChange={(e) =>
+                                                      handleMultipleChoiceChange(
+                                                        question._id,
+                                                        index,
+                                                        e.target.checked
+                                                      )
+                                                    }
+                                                  />
+                                                }
+                                                label={option}
+                                              />
+                                            )
+                                          )}
+                                        </FormGroup>
+                                      )}
+                                    </FormControl>
+                                  </div>
+                                ) : null
+                              )}
+                            </form>
+
+                            {/* Pagination Controls */}
+                            <div
+                              className="w-full h-16 flex items-center justify-between px-4 border-[2px] mb-[3px] border-[#155e75] text-slate-600 bg-white rounded-xl"
+                              style={{
+                                boxShadow: "0px 2.5px 0px 0px #155e75",
                               }}
                             >
-                              <button
-                                className={`text-[15px] font-medium py-2 px-3 rounded-md ${
-                                  selectedIndexes[0] === 0
-                                    ? "bg-slate-100 cursor-not-allowed"
-                                    : "bg-slate-100 hover:bg-cyan-800 hover:text-slate-100"
-                                }`}
-                                onClick={handlePrevious}
-                                disabled={selectedIndexes[0] === 0}
+                              <div className="flex gap-7">
+                                <h1 className="text-[#164e63]">
+                                  Focus & Conquer!
+                                </h1>
+                              </div>
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  gap: "12px",
+                                  color: "#164e63",
+                                  alignItems: "center",
+                                }}
                               >
-                                <ArrowBackIosNewIcon
-                                  style={{ fontSize: "15px" }}
-                                />
-                                Prev
-                              </button>
+                                <button
+                                  className={`text-[15px] font-medium py-2 px-3 rounded-md ${
+                                    selectedIndexes[0] === 0
+                                      ? "bg-slate-100 cursor-not-allowed"
+                                      : "bg-slate-100 hover:bg-cyan-800 hover:text-slate-100"
+                                  }`}
+                                  onClick={handlePrevious}
+                                  disabled={selectedIndexes[0] === 0}
+                                >
+                                  <ArrowBackIosNewIcon
+                                    style={{ fontSize: "15px" }}
+                                  />
+                                  Prev
+                                </button>
 
-                              <button
-                                className={`text-[15px] font-medium py-2 px-3 rounded-md ${
-                                  selectedIndexes[0] === questions.length - 1
-                                    ? "bg-slate-100 cursor-not-allowed"
-                                    : "bg-slate-100 hover:bg-cyan-800 hover:text-slate-100"
-                                }`}
-                                onClick={handleNext}
-                                disabled={
-                                  selectedIndexes[0] === questions.length - 1
-                                }
-                              >
-                                Next{" "}
-                                <ArrowForwardIosIcon
-                                  style={{ fontSize: "15px" }}
-                                />
-                              </button>
-                            </Box>
+                                <button
+                                  className={`text-[15px] font-medium py-2 px-3 rounded-md ${
+                                    selectedIndexes[0] === questions.length - 1
+                                      ? "bg-slate-100 cursor-not-allowed"
+                                      : "bg-slate-100 hover:bg-cyan-800 hover:text-slate-100"
+                                  }`}
+                                  onClick={handleNext}
+                                  disabled={
+                                    selectedIndexes[0] === questions.length - 1
+                                  }
+                                >
+                                  Next{" "}
+                                  <ArrowForwardIosIcon
+                                    style={{ fontSize: "15px" }}
+                                  />
+                                </button>
+                              </Box>
+                            </div>
                           </div>
                         </div>
-                      </div>
-
-                      {/* Resizable Divider with Thumb */}
-                      <div
-                        className="relative flex h-7 w-[18px] overflow-hidden items-center justify-center rounded-[4px] cursor-col-resize"
-                        onMouseDown={handleMouseDown}
-                      >
-                        {/* Thumb */}
-                        <DragIndicatorTwoToneIcon />
-                      </div>
-
-                      {/* Right Panel */}
-                      <div
-                        className="h-full min-w-[400px] p-1"
-                        style={{
-                          width: `calc(100% - ${leftWidth}% - 10px)`,
-                        }}
-                      >
-                        <div className="gap-5 flex flex-col">
+                        {/* Resizable Divider with Thumb */}
+                        <div
+                          className="relative flex h-7 min-w-9 overflow-hidden items-center justify-center rounded-[4px] cursor-col-resize"
+                          onMouseDown={handleMouseDown}
+                        >
+                          {/* Thumb */}
+                          <DragIndicatorTwoToneIcon />
+                        </div>
+                        {/* Right Panel */}
+                        <div
+                          className="h-full max-h-[calc(100vh-100px)] min-w-[400px] gap-4 flex flex-col"
+                          style={{
+                            width: `calc(100vw - ${leftWidth}%)`,
+                          }}
+                        >
                           <div
-                            className="h-auto bg-white border-[2px] border-[#155e75] rounded-lg px-6 py-4"
+                            className="h-full max-h-[calc(100%-83px)] overflow-hidden bg-white border-[2px] border-[#155e75] rounded-lg px-6 py-4"
                             style={{
                               boxShadow: "0px 2.5px 0px 0px #155e75",
                             }}
                           >
-                            <h1 className="text-[17px] mb-5 text-[#164e63] font-medium">
-                              Notes here!
-                            </h1>
+                            <div className="flex flex-col justify-start gap-2">
+                              <h1 className="text-[17px] text-[#164e63] font-medium">
+                                Notes here!
+                              </h1>
 
-                            {/* Text Input Area */}
-                            <textarea
-                              className="w-full h-[13vh] mb-2 p-2 border-[1px] border-slate-300 rounded-md resize-none text-[14px] focus:outline-none"
-                              placeholder="Type something..."
-                              value={noteText}
-                              onChange={(e) => setNoteText(e.target.value)}
-                            />
-
-                            {/* Calculator */}
-                            <div className="w-[80%] mx-auto">
-                              <Calculator />
+                              {/* Text Input Area */}
+                              <textarea
+                                className="w-full h-32 p-2 border-[1px] border-slate-300 rounded-md resize-none text-[14px] focus:outline-none"
+                                placeholder="Type something..."
+                                value={noteText}
+                                onChange={(e) => setNoteText(e.target.value)}
+                              />
                             </div>
-                            {/* Drawing Area */}
-                            {/* <div
-                              className="mt-4 border-[1.5px] border-slate-300 bg-slate-50 rounded-md overflow-auto"
-                              style={{
-                                height: "32vh",
-                                maxWidth: "500px",
-                              }}
-                            > */}
-                            {/* <canvas
+
+                            {/* Draggable modal to simulate PiP mode */}
+                            {isCalculatorOpen && (
+                              <Draggable>
+                                <div className="fixed top-20 right-5 cursor-grab active:cursor-grabbing rounded-3xl z-50">
+                                  {/* Calculator component */}
+                                  <Calculator onClose={onCalculatorClose} />
+                                </div>
+                              </Draggable>
+                            )}
+
+                            {/* Canvas */}
+                            {/* <Button
+                              onPress={onCanvasOpen}
+                              isDisabled={isCanvasOpen}
+                            >
+                              Canvas
+                            </Button> */}
+                            {/* Draggable modal to simulate PiP mode */}
+                            {/* {isCanvasOpen && (
+                              <Draggable>
+                              <> */}
+                            <div className="mt-4 border-[1.5px] w-full h-[calc(100%-260px)] border-slate-300 bg-slate-50 shadow-slate-200 shadow-md rounded-md overflow-auto">
+                              <canvas
                                 ref={canvasRef}
                                 className="rounded-md"
                                 width={1000}
@@ -2053,105 +2241,60 @@ const QuestionComponent: React.FC = () => {
                                 onMouseMove={draw}
                                 onMouseUp={stopDrawing}
                                 onMouseLeave={stopDrawing}
-                              /> */}
-                            {/* Color Picker and Size Changer */}
-                            {/* <div className="mt-4 min-w-[150px]">
-                                <label className="mr-2">Pencil Color:</label>
-                                <input
-                                  type="color"
-                                  value={color}
-                                  onChange={(e) => setColor(e.target.value)}
-                                />
-                                <label className="ml-4 mr-2">
-                                  Pencil Size:
-                                </label>
-                                <input
-                                  type="range"
-                                  min="1"
-                                  max="20"
-                                  value={lineWidth}
-                                  onChange={(e) => setLineWidth(e.target.value)}
-                                />
-                                <span className="ml-2">{lineWidth}</span>
-                              </div> */}
-                            {/* </div> */}
+                              />
+                            </div>
+                            <div className="h-[80px] flex flex-col justify-between">
+                              <div className="flex items-center w-full mt-2 justify-between">
+                                <Button onClick={clearCanvas}>Clear</Button>
+                                <span className="">
+                                  <label className="mr-2 poppins">
+                                    Pen Color:
+                                  </label>
+                                  <ColorPicker
+                                    defaultValue={"#000000"}
+                                    value={color}
+                                    onChange={(value) =>
+                                      setColor(value.toHexString())
+                                    }
+                                  />
+                                </span>
+                              </div>
+                              {/* Color Picker and Size Changer */}
+                              <Slider
+                                step={1}
+                                size="md"
+                                minValue={0}
+                                maxValue={10}
+                                color="foreground"
+                                showSteps={true}
+                                value={lineWidth}
+                                className="max-w-full mt-1 scale-[0.8]"
+                                defaultValue={2}
+                                onChange={(value) => setLineWidth(value)}
+                              />
+                            </div>
+                            {/* </>
+                               </Draggable>
+                            )} */}
                           </div>
                           <div
-                            className="w-full h-14 p-2 flex items-center rounded-lg justify-end px-4 border-[2px] border-[#155e75] text-cyan-900 bg-white"
+                            className="w-full min-h-16 max-h-16 p-2 flex items-center rounded-lg justify-end px-4 border-[2px] border-[#155e75] text-cyan-900 bg-white"
                             style={{
                               boxShadow: "0px 2.5px 0px 0px #155e75",
                             }}
                           >
-                            <button
-                              onClick={clearCanvas}
-                              className="text-[15px] font-medium bg-slate-100 py-2 px-3 rounded-md"
+                            {/* Calculator */}
+                            <Button
+                              className="bg-slate-100 text-[#164e63] rounded-lg border-[#4c6778] border-opacity-30 border-[1px]"
+                              onPress={onCalculatorOpen}
+                              isDisabled={isCalculatorOpen}
                             >
-                              Clear
-                            </button>
+                              Calculator
+                            </Button>
                           </div>
                         </div>
-                      </div>
+                      </span>
                     </div>
-                    <FormGroup>
-                      <Box
-                        sx={{
-                          display: "grid",
-                          gridTemplateColumns: "repeat(2, 1fr)",
-                          width: 94,
-                          maxHeight: "72vh",
-                          overflow: "hidden",
-                          overflowY: "scroll",
-                          padding: "14px 5px",
-                          alignItems: "center",
-                          justifyItems: "center",
-                          backgroundColor: "#ffffff",
-                          boxShadow: "0px 0px 7px 0px #e2e8f0",
-                          borderRadius: "10px 0px 0px 10px",
-                          transition: "scale 0.3s ease-in-out",
-                          "&:hover": {
-                            scale: 1.01,
-                          },
-                        }}
-                      >
-                        {questions.map((question, index) => (
-                          <Box
-                            key={question._id}
-                            onClick={() => handleBoxClick(index)}
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              width: "31px",
-                              height: "31px",
-                              borderRadius: "5px",
-                              border: "1.5px solid",
-                              borderColor: selectedIndexes.includes(index)
-                                ? "#083344"
-                                : selectedAnswers[question._id]
-                                ? "#e2e8f0"
-                                : "#e2e8f0",
-                              backgroundColor: selectedIndexes.includes(index)
-                                ? "#0e7490"
-                                : selectedAnswers[question._id]
-                                ? "#b2d5dc"
-                                : "white",
-                              color: selectedIndexes.includes(index)
-                                ? "white"
-                                : selectedAnswers[question._id]
-                                ? "#083344"
-                                : "black",
-                              cursor: "pointer",
-                              marginBottom: "10px",
-                              textAlign: "center",
-                            }}
-                          >
-                            <p className="poppins text-[16px] font-medium">
-                              {index + 1}
-                            </p>
-                          </Box>
-                        ))}
-                      </Box>
-                    </FormGroup>
                   </div>
 
                   {/* Progress Loader */}
@@ -2177,7 +2320,7 @@ const QuestionComponent: React.FC = () => {
                           backgroundColor: "#0e7490",
                           height: "100%",
                           borderRadius: "8px",
-                          transition: "width 0.5s ease-in-out",
+                          transition: "width 1s ease-in-out",
                         }}
                       />
                     </div>

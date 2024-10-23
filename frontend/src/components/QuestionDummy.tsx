@@ -23,7 +23,7 @@ import {
 import { showToast } from "../toastUtil.js";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
-import backgroundImage from "../assets/bg-image.jpg";
+import backgroundImage from "../assets/bg_image.jpg";
 import DragIndicatorTwoToneIcon from "@mui/icons-material/DragIndicatorTwoTone";
 import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
 import BookmarkIcon from "@mui/icons-material/Bookmark";

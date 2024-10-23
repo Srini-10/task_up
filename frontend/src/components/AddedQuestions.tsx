@@ -51,7 +51,7 @@ const AddedQuestions = ({
 
   return (
     <>
-      <div className="w-full">
+      <div className="w-full h-[calc(100vh-90px)] overflow-y-scroll">
         {Object.keys(groupedQuestions).length > 0 ? (
           <>
             <List>
@@ -61,15 +61,17 @@ const AddedQuestions = ({
               {Object.entries(groupedQuestions).map(
                 ([sector, sectorQuestions], sectorIndex) => (
                   <div key={sectorIndex}>
-                    <h2 className="poppins2 text-[18px] mt-4 mb-2 py-1.5 px-3 rounded-lg bg-[#dbe2e5] text-[#083344]">
-                      {sector}
-                    </h2>
+                    {sector && (
+                      <h2 className="poppins2 text-[18px] mt-4 mb-2 py-1.5 px-3 rounded-lg bg-[#dbe2e5] text-[#083344]">
+                        {sector}
+                      </h2>
+                    )}
                     {sectorQuestions.map((question, questionIndex) => (
                       <div
                         key={questionIndex}
-                        className="flex justify-between items-start border-b-[1.5px] pb-2 border-gray-100"
+                        className="max-w-full px-3 flex justify-between overflow-hidden items-start border-b-[1.5px] pb-2 border-gray-100"
                       >
-                        <h1 className="mt-3 poppins text-[14px] flex overflow-hidden w-[330px] text-[#000000]">
+                        <h1 className="mt-3 poppins text-[14px] flex overflow-hidden max-w-[330px] text-[#000000]">
                           <p className="text-red-500">
                             {question.required ? "*" : ""}
                           </p>
